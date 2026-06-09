@@ -8,25 +8,28 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useSignIn } from '@clerk/expo';
-import { useState } from 'react';
-import { authStyles } from '../../assets/styles/auth.styles';
-import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../../constants/colors';
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useSignIn, useAuth, useClerk } from "@clerk/expo";
+import { useState } from "react";
+import { authStyles } from "../../assets/styles/auth.styles";
+import { Ionicons } from "@expo/vector-icons";
+import { COLORS } from "../../constants/colors";
+import { Image } from "expo-image";
 
 const SignInScreen = () => {
   const router = useRouter();
-  const { signIn, setActive, isLoaded } = useSignIn();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { isLoaded } = useAuth();
+  const { setActive } = useClerk();
+  const { signIn } = useSignIn();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSignIn = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert("Error", "Please fill in all fields");
       return;
     }
     if (!isLoaded) return;
@@ -37,16 +40,41 @@ const SignInScreen = () => {
         identifier: email,
         password,
       });
-      if (signInResult.status === 'complete') {
-        await setActive({ session: signInResult.createdSessionId });
-        router.push('/(tabs)');
+
+      // 1. Clerk 응답에 에러가 담겨서 리턴된 경우 즉시 에러 처리
+      if (signInResult?.error) {
+        const clerkError = signInResult.error;
+        const errorToThrow = new Error(clerkError.message || "Sign in failed.");
+        errorToThrow.errors = clerkError.errors || (clerkError.message ? [clerkError] : []);
+        throw errorToThrow;
+      }
+
+      // 2. Clerk 응답이 { result } 래핑 구조를 가질 경우 실제 SignInResource 추출
+      const actualResult = signInResult?.result ? signInResult.result : signInResult;
+      const status = actualResult?.status || signIn.status;
+
+      if (status === "complete") {
+        const createdSessionId = actualResult?.createdSessionId || signIn.createdSessionId;
+        
+        if (createdSessionId) {
+          await setActive({ session: createdSessionId });
+          router.push("/(tabs)");
+        } else if (typeof signIn.finalize === "function") {
+          // Clerk Core 3 미래 버전 API 대응
+          await signIn.finalize({
+            navigate: (to) => router.push(to),
+          });
+        } else {
+          throw new Error("Session ID not found and finalize method is missing.");
+        }
       } else {
-        Alert.alert('Error', 'Failed to sign in. Please try again.');
-        console.error(JSON.stringify(signInResult, null, 2));
+        Alert.alert("Error", `Failed to sign in. Status: ${status}`);
+        // console.error(JSON.stringify(signInResult || signIn, null, 2));
       }
     } catch (err) {
-      Alert.alert('Error', err.errors?.[0]?.message || 'Sign in failed');
-      console.error(JSON.stringify(err, null, 2));
+      const errorMessage = err.errors?.[0]?.message || err.message || "Sign in failed";
+      Alert.alert("Error", errorMessage);
+      // console.error(JSON.stringify(err, null, 2));
     } finally {
       setLoading(false);
     }
@@ -55,10 +83,22 @@ const SignInScreen = () => {
   return (
     <View style={authStyles.container}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={authStyles.keyboardView}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
       >
-        <ScrollView contentContainerStyle={authStyles.scrollContent}>
+        <ScrollView
+          contentContainerStyle={authStyles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View>
+            <Image
+              source={require("../../assets/images/i1.png")}
+              style={authStyles.image}
+              contentFit="contain"
+            />
+          </View>
+
           <Text style={authStyles.title}>Recipe App</Text>
           <Text style={authStyles.subtitle}>
             Welcome Back! Please login to your account
@@ -92,7 +132,7 @@ const SignInScreen = () => {
                 onPress={() => setShowPassword(!showPassword)}
               >
                 <Ionicons
-                  name={showPassword ? 'eye-off' : 'eye'}
+                  name={showPassword ? "eye-off" : "eye"}
                   size={24}
                   color={COLORS.textLight}
                 />
@@ -102,20 +142,23 @@ const SignInScreen = () => {
             <TouchableOpacity
               style={[
                 authStyles.authButton,
-                loading && authStyles.buttonDisabled,
+                (loading || !isLoaded) && authStyles.buttonDisabled,
               ]}
               onPress={handleSignIn}
-              disabled={loading}
+              disabled={loading || !isLoaded}
+              activeOpacity={0.8}
             >
               {loading ? (
                 <ActivityIndicator color={COLORS.white} />
               ) : (
-                <Text style={authStyles.buttonText}>Sign In</Text>
+                <Text style={authStyles.buttonText}>
+                  {isLoaded ? "Sign In" : "Loading Clerk..."}
+                </Text>
               )}
             </TouchableOpacity>
 
             <View style={authStyles.linkContainer}>
-              <TouchableOpacity onPress={() => router.push('/sign-up')}>
+              <TouchableOpacity onPress={() => router.push("/sign-up")}>
                 <Text style={authStyles.linkText}>
                   {"Don't have an account? "}
                   <Text style={authStyles.link}>Sign Up</Text>
