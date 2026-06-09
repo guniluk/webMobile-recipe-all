@@ -9,7 +9,14 @@ const TabsLayout = () => {
 
   if (!isLoaded) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: COLORS.background,
+        }}
+      >
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
@@ -50,7 +57,11 @@ const TabsLayout = () => {
         options={{
           title: 'Recipes',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'restaurant' : 'restaurant-outline'} size={24} color={color} />
+            <Ionicons
+              name={focused ? 'restaurant' : 'restaurant-outline'}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />
@@ -59,7 +70,11 @@ const TabsLayout = () => {
         options={{
           title: 'Search',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'search' : 'search-outline'} size={24} color={color} />
+            <Ionicons
+              name={focused ? 'search' : 'search-outline'}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />
@@ -68,7 +83,11 @@ const TabsLayout = () => {
         options={{
           title: 'Favorites',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'heart' : 'heart-outline'} size={24} color={color} />
+            <Ionicons
+              name={focused ? 'heart' : 'heart-outline'}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />
