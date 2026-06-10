@@ -1,158 +1,248 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  FlatList, 
+  TouchableOpacity, 
+  StyleSheet, 
+  ActivityIndicator, 
+  RefreshControl 
+} from 'react-native';
 import { COLORS } from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-
-const MOCK_RECIPES = [
-  {
-    id: '1',
-    title: 'Avocado Toast',
-    description: 'Crispy sourdough toast with mashed seasoned avocado.',
-    image: 'https://images.unsplash.com/photo-1541532713592-79a0317b6b77?w=300&auto=format&fit=crop&q=80',
-    time: '10m',
-    servings: '1'
-  },
-  {
-    id: '2',
-    title: 'Smoothie Bowl',
-    description: 'Refreshing smoothie blend topped with fresh berries.',
-    image: 'https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?w=300&auto=format&fit=crop&q=80',
-    time: '15m',
-    servings: '2'
-  },
-  {
-    id: '3',
-    title: 'Classic Pancakes',
-    description: 'Fluffy buttermilk pancakes served with maple syrup.',
-    image: 'https://images.unsplash.com/photo-1528207776546-365bb710ee93?w=300&auto=format&fit=crop&q=80',
-    time: '20m',
-    servings: '3'
-  },
-  {
-    id: '4',
-    title: 'Tomato Pasta',
-    description: 'Rich tomato basil sauce tossed with fresh al dente pasta.',
-    image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=300&auto=format&fit=crop&q=80',
-    time: '25m',
-    servings: '2'
-  }
-];
+import { useRouter } from 'expo-router';
+import { MealAPI } from '../../services/mealAPI';
+import { searchStyles } from '../../assets/styles/search.styles';
 
 const SearchScreen = () => {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [meals, setMeals] = useState([]);
+  const [allFetchedMeals, setAllFetchedMeals] = useState([]);
+  const [page, setPage] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [isRandom, setIsRandom] = useState(true);
 
-  const categories = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Healthy'];
-
-  const filteredRecipes = MOCK_RECIPES.filter(recipe => {
-    const matchesSearch = recipe.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          recipe.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    let matchesCategory = true;
-    if (selectedCategory !== 'All') {
-      if (selectedCategory === 'Breakfast') {
-        matchesCategory = ['Avocado Toast', 'Smoothie Bowl', 'Classic Pancakes'].includes(recipe.title);
-      } else if (selectedCategory === 'Lunch' || selectedCategory === 'Dinner') {
-        matchesCategory = ['Tomato Pasta'].includes(recipe.title);
-      } else if (selectedCategory === 'Healthy') {
-        matchesCategory = ['Avocado Toast', 'Smoothie Bowl'].includes(recipe.title);
-      }
+  // 1. 랜덤 레시피 6개 가져오기 - useCallback 적용
+  const fetchRandomMeals = useCallback(async () => {
+    setLoading(true);
+    try {
+      const rawMeals = await MealAPI.getRandomMeals(6);
+      const transformed = rawMeals
+        .map(meal => MealAPI.transformMealData(meal))
+        .filter(meal => meal !== null); // null 항목 필터링으로 데이터 깨짐 방지
+      setMeals(transformed);
+      setIsRandom(true);
+      setAllFetchedMeals([]);
+      setPage(0);
+    } catch (error) {
+      console.error('Failed to fetch random meals:', error);
+      setMeals([]);
+    } finally {
+      setLoading(false);
     }
-    return matchesSearch && matchesCategory;
-  });
+  }, []);
+
+  // 2. 검색어로 검색하기 - useCallback 적용
+  const handleSearch = useCallback(async (query) => {
+    if (!query.trim()) {
+      fetchRandomMeals();
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      let rawMeals = await MealAPI.searchMealByName(query);
+      
+      // 이름으로 검색 결과가 없는 경우 재료로 검색
+      if (!rawMeals || rawMeals.length === 0) {
+        rawMeals = await MealAPI.filterByIngredient(query);
+      }
+
+      const transformed = rawMeals
+        .map(meal => MealAPI.transformMealData(meal))
+        .filter(meal => meal !== null); // null 항목 필터링으로 데이터 깨짐 방지
+      
+      setAllFetchedMeals(transformed);
+      setPage(0);
+      setIsRandom(false);
+      
+      // 검색 시 첫 12개 보여주기
+      setMeals(transformed.slice(0, 12));
+    } catch (error) {
+      console.error('Search failed:', error);
+      setMeals([]);
+      setAllFetchedMeals([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchRandomMeals]);
+
+  // 컴포넌트 마운트 시 최초 랜덤 레시피 6개 로드
+  useEffect(() => {
+    fetchRandomMeals();
+  }, [fetchRandomMeals]);
+
+  // 검색어 입력 디바운스 적용 (600ms)
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      fetchRandomMeals();
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(() => {
+      handleSearch(searchQuery);
+    }, 600);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery, fetchRandomMeals, handleSearch]);
+
+  // 3. 당겨서 새로고침 (랜덤 레시피 상태일 때만 작동)
+  const onRefresh = useCallback(async () => {
+    if (!isRandom) return;
+    setRefreshing(true);
+    try {
+      const rawMeals = await MealAPI.getRandomMeals(6);
+      const transformed = rawMeals
+        .map(meal => MealAPI.transformMealData(meal))
+        .filter(meal => meal !== null); // null 항목 필터링으로 데이터 깨짐 방지
+      setMeals(transformed);
+    } catch (error) {
+      console.error('Refresh failed:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [isRandom]);
+
+  // 4. 무한 스크롤 (Load More) - 12개 항목 끝 부분 도달 시 호출됨 - useCallback 적용
+  const loadMoreMeals = useCallback(() => {
+    if (isRandom || loading) return;
+
+    const nextPage = page + 1;
+    const startIndex = nextPage * 12;
+
+    // 더 보여줄 데이터가 남아있는 경우 누적하여 추가
+    if (startIndex < allFetchedMeals.length) {
+      const nextBatch = allFetchedMeals.slice(startIndex, startIndex + 12);
+      setMeals(prevMeals => [...prevMeals, ...nextBatch]);
+      setPage(nextPage);
+    }
+  }, [isRandom, loading, page, allFetchedMeals]);
+
+  // 개별 레시피 카드 렌더링 - useCallback 적용
+  const renderRecipeItem = useCallback(({ item }) => {
+    if (!item) return null; // 방어 코드: item이 null일 경우 렌더링하지 않음
+    return (
+      <TouchableOpacity
+        style={[styles.recipeCard, { backgroundColor: COLORS.card, shadowColor: COLORS.shadow }]}
+        onPress={() => router.push(`/recipe/${item.id}`)}
+        activeOpacity={0.8}
+      >
+        <Image source={{ uri: item.imageUrl }} style={styles.recipeImage} contentFit="cover" />
+        <View style={styles.recipeInfo}>
+          <Text style={[styles.recipeTitle, { color: COLORS.text }]} numberOfLines={1}>{item.title}</Text>
+          <Text style={[styles.recipeDesc, { color: COLORS.textLight }]} numberOfLines={2}>{item.description}</Text>
+          <View style={styles.recipeMeta}>
+            <View style={styles.metaItem}>
+              <Ionicons name="time-outline" size={14} color={COLORS.textLight} />
+              <Text style={[styles.metaText, { color: COLORS.textLight }]}>{item.cookTime}</Text>
+            </View>
+            <View style={styles.metaItem}>
+              <Ionicons name="people-outline" size={14} color={COLORS.textLight} />
+              <Text style={[styles.metaText, { color: COLORS.textLight }]}>{item.servings} Servings</Text>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  }, [router]);
+
+  const keyExtractor = useCallback((item, index) => item?.id ? item.id.toString() : index.toString(), []);
 
   return (
-    <View style={[styles.container, { backgroundColor: COLORS.background }]}>
+    <View style={searchStyles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: COLORS.text }]}>Search Recipes</Text>
       </View>
 
       {/* Search Bar Container */}
-      <View style={[styles.searchContainer, { backgroundColor: COLORS.card, borderColor: COLORS.border }]}>
-        <Ionicons name="search-outline" size={20} color={COLORS.textLight} style={styles.searchIcon} />
+      <View style={searchStyles.searchContainer}>
+        <Ionicons name="search-outline" size={20} color={COLORS.textLight} style={searchStyles.searchIcon} />
         <TextInput
-          style={[styles.searchInput, { color: COLORS.text }]}
+          style={searchStyles.searchInput}
           placeholder="Search recipes, ingredients..."
           placeholderTextColor={COLORS.textLight}
           value={searchQuery}
           onChangeText={setSearchQuery}
+          returnKeyType="search"
+          onSubmitEditing={() => handleSearch(searchQuery)}
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
+          <TouchableOpacity onPress={() => setSearchQuery('')} style={searchStyles.clearButton}>
             <Ionicons name="close-circle" size={18} color={COLORS.textLight} />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Categories Horizontal Scroll */}
-      <View style={styles.categoriesContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesScroll}>
-          {categories.map((category) => {
-            const isSelected = selectedCategory === category;
-            return (
-              <TouchableOpacity
-                key={category}
-                style={[
-                  styles.categoryBadge,
-                  { 
-                    backgroundColor: isSelected ? COLORS.primary : COLORS.card,
-                    borderColor: COLORS.border
-                  }
-                ]}
-                onPress={() => setSelectedCategory(category)}
-              >
-                <Text style={[
-                  styles.categoryText, 
-                  { color: isSelected ? COLORS.white : COLORS.text }
-                ]}>
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
+      {/* Results Header (검색어 입력 후 결과가 있을 때만 표시) */}
+      {!isRandom && meals.length > 0 && (
+        <View style={[searchStyles.resultsHeader, { paddingHorizontal: 20 }]}>
+          <Text style={searchStyles.resultsTitle}>Popular Recipes</Text>
+          <Text style={searchStyles.resultsCount}>{allFetchedMeals.length} found</Text>
+        </View>
+      )}
 
       {/* Results List */}
-      <ScrollView contentContainerStyle={styles.resultsScroll} showsVerticalScrollIndicator={false}>
-        {filteredRecipes.length > 0 ? (
-          filteredRecipes.map((recipe) => (
-            <TouchableOpacity key={recipe.id} style={[styles.recipeCard, { backgroundColor: COLORS.card, shadowColor: COLORS.shadow }]}>
-              <Image source={{ uri: recipe.image }} style={styles.recipeImage} contentFit="cover" />
-              <View style={styles.recipeInfo}>
-                <Text style={[styles.recipeTitle, { color: COLORS.text }]} numberOfLines={1}>{recipe.title}</Text>
-                <Text style={[styles.recipeDesc, { color: COLORS.textLight }]} numberOfLines={2}>{recipe.description}</Text>
-                <View style={styles.recipeMeta}>
-                  <View style={styles.metaItem}>
-                    <Ionicons name="time-outline" size={14} color={COLORS.textLight} />
-                    <Text style={[styles.metaText, { color: COLORS.textLight }]}>{recipe.time}</Text>
-                  </View>
-                  <View style={styles.metaItem}>
-                    <Ionicons name="people-outline" size={14} color={COLORS.textLight} />
-                    <Text style={[styles.metaText, { color: COLORS.textLight }]}>{recipe.servings} Servings</Text>
-                  </View>
-                </View>
+      {loading && meals.length === 0 ? (
+        <View style={searchStyles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={meals || []}
+          renderItem={renderRecipeItem}
+          keyExtractor={keyExtractor}
+          contentContainerStyle={styles.resultsScroll}
+          showsVerticalScrollIndicator={false}
+          onEndReached={loadMoreMeals}
+          onEndReachedThreshold={0.3} // 리스트 끝 30% 영역 도달 시 자동 로드
+          refreshControl={
+            isRandom ? (
+              <RefreshControl 
+                refreshing={refreshing} 
+                onRefresh={onRefresh} 
+                colors={[COLORS.primary]} 
+                tintColor={COLORS.primary}
+              />
+            ) : undefined
+          }
+          ListEmptyComponent={
+            !loading && (
+              <View style={searchStyles.emptyState}>
+                <Ionicons name="search-outline" size={60} color={COLORS.border} />
+                <Text style={searchStyles.emptyTitle}>No recipes found</Text>
+                <Text style={searchStyles.emptyDescription}>Try searching for different keywords</Text>
               </View>
-            </TouchableOpacity>
-          ))
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="search-outline" size={60} color={COLORS.border} />
-            <Text style={[styles.emptyText, { color: COLORS.textLight }]}>No recipes found</Text>
-            <Text style={[styles.emptySubtext, { color: COLORS.textLight }]}>Try searching for different keywords</Text>
-          </View>
-        )}
-      </ScrollView>
+            )
+          }
+          ListFooterComponent={
+            loading && meals.length > 0 ? (
+              <View style={styles.footerLoader}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              </View>
+            ) : null
+          }
+        />
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   header: {
     paddingHorizontal: 20,
     paddingTop: 20,
@@ -161,41 +251,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 20,
-    paddingHorizontal: 12,
-    height: 50,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    height: '100%',
-  },
-  categoriesContainer: {
-    marginTop: 15,
-    marginBottom: 10,
-  },
-  categoriesScroll: {
-    paddingHorizontal: 20,
-    gap: 8,
-  },
-  categoryBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  categoryText: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   resultsScroll: {
     paddingHorizontal: 20,
@@ -240,20 +295,9 @@ const styles = StyleSheet.create({
   metaText: {
     fontSize: 12,
   },
-  emptyContainer: {
+  footerLoader: {
+    paddingVertical: 15,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 60,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 15,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    marginTop: 5,
-    textAlign: 'center',
   }
 });
 

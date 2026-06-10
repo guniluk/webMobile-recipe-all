@@ -1,98 +1,277 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { COLORS } from '../../constants/colors';
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-
-const FAVORITE_RECIPES = [
-  {
-    id: '1',
-    title: 'Avocado Toast',
-    description: 'Crispy sourdough toast with mashed seasoned avocado.',
-    image: 'https://images.unsplash.com/photo-1541532713592-79a0317b6b77?w=300&auto=format&fit=crop&q=80',
-    time: '10m',
-    servings: '1'
-  },
-  {
-    id: '3',
-    title: 'Classic Pancakes',
-    description: 'Fluffy buttermilk pancakes served with maple syrup.',
-    image: 'https://images.unsplash.com/photo-1528207776546-365bb710ee93?w=300&auto=format&fit=crop&q=80',
-    time: '20m',
-    servings: '3'
-  }
-];
+import React, { useState, useCallback, useMemo } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
+import { COLORS } from "../../constants/colors";
+import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import { useAuth, useUser } from "@clerk/expo";
+import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
+import { API_URL } from "../../constants/api";
+import { favoritesStyles } from "../../assets/styles/favorites.styles";
 
 const FavoritesScreen = () => {
+  const router = useRouter();
+  const { user } = useUser();
+  const { signOut } = useAuth();
+
+  const [favorites, setFavorites] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const handleSignOut = useCallback(() => {
+    Alert.alert('Logout', 'Are you sure you want to log out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await signOut();
+            router.replace('/sign-in');
+          } catch (err) {
+            Alert.alert('Error', `error: ${JSON.stringify(err)}`);
+          }
+        },
+      },
+    ]);
+  }, [signOut, router]);
+
+  // 화면에 진입/포커스될 때마다 실시간으로 즐겨찾기 목록 fetch
+  useFocusEffect(
+    useCallback(() => {
+      const fetchFavorites = async () => {
+        if (!user) return;
+        setLoading(true);
+        try {
+          const response = await fetch(`${API_URL}/favorites/${user.id}`);
+          if (response.ok) {
+            const data = await response.json();
+            setFavorites(data || []);
+          } else {
+            console.error("Failed to fetch favorites");
+          }
+        } catch (error) {
+          console.error("Error fetching favorites:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchFavorites();
+    }, [user]),
+  );
+
+  // 즐겨찾기 목록에서 삭제
+  const handleRemoveFavorite = useCallback(async (recipeId) => {
+    if (!user) return;
+    try {
+      const response = await fetch(
+        `${API_URL}/favorites/${user.id}/${recipeId}`,
+        {
+          method: "DELETE",
+        },
+      );
+      if (response.ok) {
+        // 성공 시 로컬 상태 필터링하여 갱신
+        setFavorites((prev) =>
+          prev.filter((item) => item.recipeId !== recipeId),
+        );
+      } else {
+        console.error("Failed to delete favorite");
+      }
+    } catch (error) {
+      console.error("Error deleting favorite:", error);
+    }
+  }, [user]);
+
+  // 평균 요리 시간 계산 (분 단위 추출) - useMemo로 연산 최적화
+  const averageCookTime = useMemo(() => {
+    if (favorites.length === 0) return "0m";
+    const total = favorites.reduce((acc, curr) => {
+      const timeNum = parseInt(curr.cookTime) || 30; // '30m' 또는 '30 minutes' 등에서 숫자 추출
+      return acc + timeNum;
+    }, 0);
+    return `${Math.round(total / favorites.length)}m`;
+  }, [favorites]);
+
+  const renderRecipeItem = useCallback(({ item }) => (
+    <TouchableOpacity
+      style={[
+        styles.recipeCard,
+        { backgroundColor: COLORS.card, shadowColor: COLORS.shadow },
+      ]}
+      onPress={() => router.push(`/recipe/${item.recipeId}`)}
+      activeOpacity={0.8}
+    >
+      <Image
+        source={{ uri: item.image }}
+        style={styles.recipeImage}
+        contentFit="cover"
+      />
+      <View style={styles.recipeInfo}>
+        <View style={styles.titleRow}>
+          <Text
+            style={[styles.recipeTitle, { color: COLORS.text }]}
+            numberOfLines={1}
+          >
+            {item.title}
+          </Text>
+          <TouchableOpacity onPress={() => handleRemoveFavorite(item.recipeId)}>
+            <Ionicons name="heart" size={22} color={COLORS.primary} />
+          </TouchableOpacity>
+        </View>
+        <Text
+          style={[styles.recipeDesc, { color: COLORS.textLight }]}
+          numberOfLines={2}
+        >
+          Delicious recipe saved to your favorites list.
+        </Text>
+        <View style={styles.recipeMeta}>
+          <View style={styles.metaItem}>
+            <Ionicons name="time-outline" size={14} color={COLORS.textLight} />
+            <Text style={[styles.metaText, { color: COLORS.textLight }]}>
+              {item.cookTime || "30m"}
+            </Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Ionicons
+              name="people-outline"
+              size={14}
+              color={COLORS.textLight}
+            />
+            <Text style={[styles.metaText, { color: COLORS.textLight }]}>
+              {item.servings || "4"} Servings
+            </Text>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  ), [handleRemoveFavorite, router]);
+
+  const keyExtractor = useCallback((item) => item.recipeId.toString(), []);
+
+  if (!user) {
+    return (
+      <View
+        style={[
+          favoritesStyles.container,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.container, { backgroundColor: COLORS.background }]}>
+    <View style={favoritesStyles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: COLORS.text }]}>Favorites</Text>
+      <View style={favoritesStyles.header}>
+        <Text style={favoritesStyles.title}>Favorites</Text>
+        <TouchableOpacity
+          style={favoritesStyles.logoutButton}
+          onPress={handleSignOut}
+        >
+          <Ionicons name="log-out-outline" size={20} color={COLORS.text} />
+        </TouchableOpacity>
       </View>
 
-      {/* Favorites List */}
-      <ScrollView contentContainerStyle={styles.favoritesScroll} showsVerticalScrollIndicator={false}>
-        {FAVORITE_RECIPES.length > 0 ? (
-          FAVORITE_RECIPES.map((recipe) => (
-            <TouchableOpacity key={recipe.id} style={[styles.recipeCard, { backgroundColor: COLORS.card, shadowColor: COLORS.shadow }]}>
-              <Image source={{ uri: recipe.image }} style={styles.recipeImage} contentFit="cover" />
-              <View style={styles.recipeInfo}>
-                <View style={styles.titleRow}>
-                  <Text style={[styles.recipeTitle, { color: COLORS.text }]} numberOfLines={1}>{recipe.title}</Text>
-                  <TouchableOpacity>
-                    <Ionicons name="heart" size={22} color={COLORS.primary} />
-                  </TouchableOpacity>
-                </View>
-                <Text style={[styles.recipeDesc, { color: COLORS.textLight }]} numberOfLines={2}>{recipe.description}</Text>
-                <View style={styles.recipeMeta}>
-                  <View style={styles.metaItem}>
-                    <Ionicons name="time-outline" size={14} color={COLORS.textLight} />
-                    <Text style={[styles.metaText, { color: COLORS.textLight }]}>{recipe.time}</Text>
-                  </View>
-                  <View style={styles.metaItem}>
-                    <Ionicons name="people-outline" size={14} color={COLORS.textLight} />
-                    <Text style={[styles.metaText, { color: COLORS.textLight }]}>{recipe.servings} Servings</Text>
-                  </View>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="heart-outline" size={60} color={COLORS.border} />
-            <Text style={[styles.emptyText, { color: COLORS.textLight }]}>No favorites yet</Text>
-            <Text style={[styles.emptySubtext, { color: COLORS.textLight }]}>Tap the heart icon on any recipe to add it here</Text>
+      {/* Stats Cards (저장된 리스트가 있을 때만 표시) */}
+      {!loading && favorites.length > 0 && (
+        <View style={favoritesStyles.statsContainer}>
+          <View style={favoritesStyles.statCard}>
+            <View
+              style={[
+                favoritesStyles.statIcon,
+                { backgroundColor: COLORS.primary + "15" },
+              ]}
+            >
+              <Ionicons name="heart" size={20} color={COLORS.primary} />
+            </View>
+            <Text style={favoritesStyles.statValue}>
+              {favorites.length} Recipes
+            </Text>
+            <Text
+              style={{ fontSize: 12, color: COLORS.textLight, marginTop: 4 }}
+            >
+              Saved Items
+            </Text>
           </View>
-        )}
-      </ScrollView>
+          <View style={favoritesStyles.statCard}>
+            <View
+              style={[
+                favoritesStyles.statIcon,
+                { backgroundColor: COLORS.secondary + "15" },
+              ]}
+            >
+              <Ionicons name="time" size={20} color={COLORS.secondary} />
+            </View>
+            <Text style={favoritesStyles.statValue}>
+              {averageCookTime}
+            </Text>
+            <Text
+              style={{ fontSize: 12, color: COLORS.textLight, marginTop: 4 }}
+            >
+              Avg. Cook Time
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* Favorites List */}
+      {loading ? (
+        <View style={favoritesStyles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={favorites}
+          renderItem={renderRecipeItem}
+          keyExtractor={keyExtractor}
+          contentContainerStyle={[
+            favoritesStyles.recipesSection,
+            favoritesStyles.recipesGrid,
+          ]}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={favoritesStyles.emptyState}>
+              <View style={favoritesStyles.emptyIconContainer}>
+                <Ionicons
+                  name="heart-outline"
+                  size={50}
+                  color={COLORS.border}
+                />
+              </View>
+              <Text style={favoritesStyles.emptyTitle}>No favorites yet</Text>
+              <TouchableOpacity
+                style={favoritesStyles.exploreButton}
+                onPress={() => router.push("/")}
+              >
+                <Text style={favoritesStyles.exploreButtonText}>
+                  Explore Recipes
+                </Text>
+                <Ionicons name="arrow-forward" size={16} color={COLORS.white} />
+              </TouchableOpacity>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  favoritesScroll: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    paddingTop: 10,
-  },
   recipeCard: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderRadius: 16,
-    marginBottom: 15,
-    overflow: 'hidden',
+    overflow: "hidden",
     elevation: 2,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -105,16 +284,16 @@ const styles = StyleSheet.create({
   recipeInfo: {
     flex: 1,
     padding: 12,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   recipeTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     flex: 1,
     marginRight: 8,
   },
@@ -123,33 +302,17 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   recipeMeta: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   metaText: {
     fontSize: 12,
   },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 80,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 15,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    marginTop: 5,
-    textAlign: 'center',
-    paddingHorizontal: 40,
-  }
 });
 
 export default FavoritesScreen;
