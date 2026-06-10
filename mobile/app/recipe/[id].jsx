@@ -176,6 +176,10 @@ const RecipeDetailScreen = () => {
             source={{ uri: recipe.imageUrl }}
             style={styles.image}
             contentFit="cover"
+            transition={300}
+            cachePolicy="memory-disk"
+            priority="high"
+            placeholder={{ blurhash: "L6PZvn%e00t7_3afQ-fQ00ae~qj[" }}
           />
           <View style={styles.imageOverlay} />
 

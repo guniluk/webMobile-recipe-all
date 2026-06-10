@@ -22,6 +22,10 @@ const LatestRecipe = React.memo(({ latestRecipe, recentSectionHeight }) => {
           source={{ uri: latestRecipe.image }}
           style={homeStyles.featuredImage}
           contentFit="cover"
+          transition={300}
+          cachePolicy="memory-disk"
+          priority="high"
+          placeholder={{ blurhash: "L6PZvn%e00t7_3afQ-fQ00ae~qj[" }}
         />
         <View style={homeStyles.featuredOverlay}>
           <View style={{ flexDirection: 'row', gap: 8 }}>

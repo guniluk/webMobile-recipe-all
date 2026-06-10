@@ -16,6 +16,17 @@ import { useRouter } from 'expo-router';
 import { MealAPI } from '../../services/mealAPI';
 import { searchStyles } from '../../assets/styles/search.styles';
 
+// Helper function to filter out duplicate meals by id
+const filterUniqueMeals = (mealsArray) => {
+  const seen = new Set();
+  return mealsArray.filter(meal => {
+    if (!meal || !meal.id) return false;
+    const isDuplicate = seen.has(meal.id);
+    seen.add(meal.id);
+    return !isDuplicate;
+  });
+};
+
 const SearchScreen = () => {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,7 +45,7 @@ const SearchScreen = () => {
       const transformed = rawMeals
         .map(meal => MealAPI.transformMealData(meal))
         .filter(meal => meal !== null); // null 항목 필터링으로 데이터 깨짐 방지
-      setMeals(transformed);
+      setMeals(filterUniqueMeals(transformed));
       setIsRandom(true);
       setAllFetchedMeals([]);
       setPage(0);
@@ -66,12 +77,13 @@ const SearchScreen = () => {
         .map(meal => MealAPI.transformMealData(meal))
         .filter(meal => meal !== null); // null 항목 필터링으로 데이터 깨짐 방지
       
-      setAllFetchedMeals(transformed);
+      const uniqueMeals = filterUniqueMeals(transformed);
+      setAllFetchedMeals(uniqueMeals);
       setPage(0);
       setIsRandom(false);
       
       // 검색 시 첫 12개 보여주기
-      setMeals(transformed.slice(0, 12));
+      setMeals(uniqueMeals.slice(0, 12));
     } catch (error) {
       console.error('Search failed:', error);
       setMeals([]);
@@ -109,7 +121,7 @@ const SearchScreen = () => {
       const transformed = rawMeals
         .map(meal => MealAPI.transformMealData(meal))
         .filter(meal => meal !== null); // null 항목 필터링으로 데이터 깨짐 방지
-      setMeals(transformed);
+      setMeals(filterUniqueMeals(transformed));
     } catch (error) {
       console.error('Refresh failed:', error);
     } finally {
@@ -127,7 +139,7 @@ const SearchScreen = () => {
     // 더 보여줄 데이터가 남아있는 경우 누적하여 추가
     if (startIndex < allFetchedMeals.length) {
       const nextBatch = allFetchedMeals.slice(startIndex, startIndex + 12);
-      setMeals(prevMeals => [...prevMeals, ...nextBatch]);
+      setMeals(prevMeals => filterUniqueMeals([...prevMeals, ...nextBatch]));
       setPage(nextPage);
     }
   }, [isRandom, loading, page, allFetchedMeals]);

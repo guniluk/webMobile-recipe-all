@@ -20,6 +20,10 @@ const RecipeItem = React.memo(({ item }) => {
           source={{ uri: item.image }}
           style={recipeCardStyles.image}
           contentFit="cover"
+          transition={200}
+          cachePolicy="memory-disk"
+          recyclingKey={item.id.toString()}
+          placeholder={{ blurhash: "L6PZvn%e00t7_3afQ-fQ00ae~qj[" }}
         />
       </View>
       <View style={recipeCardStyles.content}>

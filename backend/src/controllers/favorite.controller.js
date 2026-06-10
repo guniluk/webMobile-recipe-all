@@ -43,4 +43,3 @@ export const deleteFavorite = async (req, res) => {
     .returning();
   res.status(200).json(deletedFavorite[0]);
 };
-

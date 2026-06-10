@@ -13,7 +13,7 @@ const cache = {
 const hasImage = (meal) => meal && typeof meal.strMealThumb === 'string' && meal.strMealThumb.trim() !== "";
 
 export const MealAPI = {
-  //search meal by name
+  // search meal by name
   searchMealByName: async (query) => {
     try {
       if (!query) {
@@ -48,7 +48,7 @@ export const MealAPI = {
     }
   },
 
-  //look full meal details by id
+  // look full meal details by id
   getMealById: async (id) => {
     try {
       if (!id) {
@@ -75,7 +75,7 @@ export const MealAPI = {
     }
   },
 
-  //look up a random single meal
+  // look up a random single meal
   getRandomMeal: async () => {
     try {
       const response = await fetch(`${BASE_URL}/random.php`);
@@ -98,7 +98,7 @@ export const MealAPI = {
     }
   },
 
-  //get multiple random meals
+  // get multiple random meals
   getRandomMeals: async (count = 6) => {
     try {
       const promises = Array(count)
@@ -112,7 +112,7 @@ export const MealAPI = {
     }
   },
 
-  //list all meal categories
+  // list all meal categories
   getCategories: async () => {
     try {
       if (cache.categories) {
@@ -132,7 +132,7 @@ export const MealAPI = {
     }
   },
 
-  //filter by main ingredient
+  // filter by main ingredient
   filterByIngredient: async (ingredient) => {
     try {
       if (!ingredient) {
@@ -159,7 +159,7 @@ export const MealAPI = {
     }
   },
 
-  //filter by category
+  // filter by category
   filterByCategory: async (category) => {
     try {
       if (!category) {
@@ -186,7 +186,7 @@ export const MealAPI = {
     }
   },
 
-  //transform TheMealDB meal data to our app format
+  // transform TheMealDB meal data to our app format
   transformMealData: (meal) => {
     if (!meal) return null;
     // Loop 1-20 for ingredients and measures
@@ -202,7 +202,7 @@ export const MealAPI = {
         ingredients.push(`${measureText} ${ingredient.trim()}`);
       }
     }
-    //extract instruction
+    // extract instruction
     const instructions = meal.strInstructions
       ? meal.strInstructions
           .split("\r\n")
@@ -232,4 +232,3 @@ export const MealAPI = {
     };
   },
 };
-

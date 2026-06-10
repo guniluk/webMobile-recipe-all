@@ -1,19 +1,14 @@
-import * as SecureStore from "expo-secure-store";
-import { Platform } from "react-native";
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 const createTokenCache = () => {
   return {
     async getToken(key: string) {
       try {
         const item = await SecureStore.getItemAsync(key);
-        if (item) {
-          // console.log(`${key} was used 🔐 \n`);
-        } else {
-          // console.log("No values stored under key: " + key);
-        }
         return item;
       } catch (error) {
-        console.error("SecureStore get item error: ", error);
+        console.error('SecureStore get item error: ', error);
         await SecureStore.deleteItemAsync(key);
         return null;
       }
@@ -22,7 +17,7 @@ const createTokenCache = () => {
       try {
         return SecureStore.setItemAsync(key, value);
       } catch (err) {
-        console.error("SecureStore save item error: ", err);
+        console.error('SecureStore save item error: ', err);
         return;
       }
     },
@@ -30,4 +25,4 @@ const createTokenCache = () => {
 };
 
 export const tokenCache =
-  Platform.OS !== "web" ? createTokenCache() : undefined;
+  Platform.OS !== 'web' ? createTokenCache() : undefined;

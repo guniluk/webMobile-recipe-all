@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Platform,
 } from "react-native";
 import { COLORS } from "../../constants/colors";
 import { Ionicons } from "@expo/vector-icons";
@@ -114,6 +115,10 @@ const FavoritesScreen = () => {
         source={{ uri: item.image }}
         style={styles.recipeImage}
         contentFit="cover"
+        transition={200}
+        cachePolicy="memory-disk"
+        recyclingKey={item.recipeId.toString()}
+        placeholder={{ blurhash: "L6PZvn%e00t7_3afQ-fQ00ae~qj[" }}
       />
       <View style={styles.recipeInfo}>
         <View style={styles.titleRow}>
@@ -240,6 +245,10 @@ const FavoritesScreen = () => {
             favoritesStyles.recipesGrid,
           ]}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={6}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === 'android'}
           ListEmptyComponent={
             <View style={favoritesStyles.emptyState}>
               <View style={favoritesStyles.emptyIconContainer}>

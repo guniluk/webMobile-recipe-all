@@ -30,6 +30,9 @@ if (
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+// 컴포넌트 언마운트 시 선택된 카테고리 상태를 보존하기 위한 모듈 범위 백업 변수
+let lastSelectedCategory = null;
+
 const HomeScreen = () => {
   const router = useRouter();
   const { user } = useUser();
@@ -63,8 +66,8 @@ const HomeScreen = () => {
         setCategories(mappedCategories);
 
         if (mappedCategories.length > 0) {
-          // 첫 번째 카테고리를 디폴트로 선택
-          setSelectedCategory(mappedCategories[0].id);
+          // 저장된 이전 카테고리가 있으면 복원하고, 없으면 첫 번째 카테고리를 선택
+          setSelectedCategory(lastSelectedCategory || mappedCategories[0].id);
         }
 
         // 최신 레시피 가져오기 (랜덤 레시피 1개)
@@ -90,6 +93,13 @@ const HomeScreen = () => {
 
     fetchInitialData();
   }, []);
+
+  // selectedCategory 상태 변화 시 백업 변수에 저장하여 컴포넌트 리마운트 시 복구 가능하게 함
+  useEffect(() => {
+    if (selectedCategory) {
+      lastSelectedCategory = selectedCategory;
+    }
+  }, [selectedCategory]);
 
   // 2. 카테고리 선택에 따른 레시피 조회
   useEffect(() => {
@@ -304,6 +314,10 @@ const HomeScreen = () => {
         keyExtractor={keyExtractor}
         numColumns={2}
         columnWrapperStyle={styles.columnWrapper}
+        initialNumToRender={6}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={Platform.OS === 'android'}
         ListHeaderComponent={
           <HomeHeader
             userNickName={userNickName}
