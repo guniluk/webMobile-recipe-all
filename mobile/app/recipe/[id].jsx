@@ -426,14 +426,16 @@ const RecipeDetailScreen = () => {
                         {idx + 1}
                       </Text>
                     </View>
-                    <Text
-                      style={[
-                        recipeDetailStyles.instructionText,
-                        { color: COLORS.text, marginBottom: 0 },
-                      ]}
-                    >
-                      {step}
-                    </Text>
+                    <View style={recipeDetailStyles.instructionContent}>
+                      <Text
+                        style={[
+                          recipeDetailStyles.instructionText,
+                          { color: COLORS.text, marginBottom: 0 },
+                        ]}
+                      >
+                        {step}
+                      </Text>
+                    </View>
                   </View>
                 ))
               ) : (

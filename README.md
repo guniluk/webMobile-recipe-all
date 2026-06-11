@@ -14,6 +14,7 @@
 4. [💻 실행 및 설정 방법 (Getting Started)](#getting-started)
 5. [⚡ 프로젝트 핵심 최적화 및 강점 (Performance Optimizations)](#performance-optimizations)
 6. [📄 기타 연동 가이드 참고](#other-guides)
+7. [🚀 프로젝트 개발 순서 매뉴얼 (Development Manual)](#development-manual)
 
 ---
 
@@ -22,25 +23,11 @@
 
 ```mermaid
 graph TD
-    subgraph Client Platforms
-        Web[Web Frontend - React & Vite]
-        Mobile[Mobile Frontend - Expo]
-    end
-
-    subgraph Backend Services
-        Express[Express API Server]
-        Clerk[Clerk Auth Provider]
-    end
-
-    subgraph Database Layer
-        Neon[(Neon Postgres DB)]
-    end
-
-    Web -->|JSON API & Auth| Express
-    Mobile -->|JSON API & Auth| Express
-    Web -.->|OAuth / Token| Clerk
-    Mobile -.->|OAuth / Token| Clerk
-    Express -->|Drizzle ORM| Neon
+    Web[Web React and Vite] --> Express[Express Server]
+    Mobile[Mobile Expo] --> Express[Express Server]
+    Web -.-> Clerk[Clerk Auth]
+    Mobile -.-> Clerk[Clerk Auth]
+    Express --> Neon[Neon Postgres DB]
 ```
 
 ### 💻 웹 프런트엔드 (Web Frontend)
@@ -308,5 +295,153 @@ project/
 * 🗄️ 데이터베이스 스키마 및 Neon PostgreSQL 연동법: [postgreDb.md](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/postgreDb.md)
 * 🔐 Clerk Auth Expo & Web 상세 인증 설정법: [clerkAuth.md](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/clerkAuth.md)
 * 🌐 Render.com 백엔드 배포 및 항시 활성화 cron 설정법: [renderOngoing.md](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/renderOngoing.md)
+
+[⬆️ 목차로 돌아가기](#toc)
+
+---
+
+<a id="development-manual"></a>
+## 🚀 프로젝트 개발 순서 매뉴얼 (Development Step-by-Step Manual)
+
+본 레시피 애플리케이션을 바닥부터 점진적으로 개발하는 과정을 **백엔드(Backend)**, **웹(Web)**, **모바일(Mobile)**로 분리하여 각 순서에 맞게 구체적으로 기술한 가이드라인입니다.
+
+---
+
+### ⚙️ 1부: [공통] 백엔드 및 데이터베이스(Database) 구축 순서
+프론트엔드 플랫폼(웹 및 모바일)이 공통의 사용자 데이터를 저장 및 동기화할 수 있도록 API 서버를 가장 먼저 빌드합니다.
+
+1. **프로젝트 디렉토리 초기화 및 패키지 설치**
+   * 프로젝트 루트 하위에 `backend` 폴더를 생성하고 패키지를 초기화합니다.
+     ```bash
+     mkdir backend && cd backend
+     npm init -y
+     ```
+   * `package.json` 파일에 `"type": "module"` 속성을 추가하여 ES Modules를 활성화합니다.
+   * 필요 패키지 의존성을 설치합니다.
+     * Core: `express`, `cors`, `dotenv`
+     * DB / ORM: `drizzle-orm`, `@neondatabase/serverless` (Neon Serverless Postgres 드라이버)
+     * 개발 유틸리티: `nodemon`, `drizzle-kit`
+
+2. **환경변수 설계 및 안전 검증 모듈 추가**
+   * [env.js](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/backend/src/config/env.js) 파일을 작성하여 서버 구동 전에 필요한 모든 환경변수(`PORT`, `DATABASE_URL`, `NODE_ENV`)의 존재 여부와 데이터 포맷을 정밀하게 사전 검증하는 스키마 구조를 셋업합니다.
+
+3. **Neon PostgreSQL Cloud DB 연동 및 스키마 설계**
+   * Neon Console에 접속하여 새 프로젝트를 생성하고 PostgreSQL DB 연결 정보(`DATABASE_URL`)를 획득하여 `backend/.env`에 기재합니다.
+   * [schema.js](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/backend/src/db/schema.js) 파일을 작성하고 Drizzle ORM 문법을 사용해 `favorites` 테이블 스키마를 선언합니다.
+     * 컬럼 구성: `id`(Primary Key), `userId`(Text, Not Null), `recipeId`(Integer, Not Null), `title`, `image`, `cookTime`, `servings`, `createdAt`
+   * `drizzle.config.js`를 백엔드 루트에 선언한 뒤, Drizzle Kit 명령어(`npx drizzle-kit push`)를 실행해 스키마 정보를 Neon Postgres DB에 즉각 싱크(Push)시킵니다.
+
+4. **비즈니스 로직 및 CRUD API 구현**
+   * [favorite.controller.js](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/backend/src/controllers/favorite.controller.js) 파일을 생성하고 사용자의 즐겨찾기 CRUD 동작을 제어하는 비동기 컨트롤러 메서드들을 작성합니다.
+     * `createFavorite`: 즐겨찾기 신규 등록 및 Neon Postgres 저장 (`insert`)
+     * `getFavorites`: 해당 유저의 즐겨찾기 목록 전체 조회 (`select().where()`)
+     * `deleteFavorite`: 특정 유저 및 레시피 ID 기반의 즐겨찾기 목록 제거 (`delete().where(and())`)
+   * [favorite.route.js](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/backend/src/routes/favorite.route.js) 라우터를 생성하고 CRUD 컨트롤러를 URI 경로에 매핑시킵니다.
+
+5. **Express 엔트리 서버 구축 및 전역 오류 제어**
+   * Express 5.x의 비동기 예외 전파 기능을 지원하기 위해 [error.middleware.js](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/backend/src/middleware/error.middleware.js) 전역 오류 핸들러 미들웨어를 구축합니다.
+   * [server.js](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/backend/src/server.js)를 생성하여 CORS, Express JSON Parser, `/api/favorites` 라우터를 설정하고 서버 리스닝을 수행합니다.
+   * Render.com 무료 티어에서의 자동 서버 잠자기(Sleep)를 방지하기 위해 10분마다 Self-Ping을 전송하는 [cron.js](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/backend/src/config/cron.js) 스케줄러를 임포트해 구동합니다.
+
+---
+
+### 💻 2부: [Web Frontend] React & Vite 개발 순서
+Vite 개발 도구를 사용하여 깔끔하고 현대적인 레시피 싱글 페이지 애플리케이션(SPA)을 제작합니다.
+
+1. **Vite React 애플리케이션 초기화**
+   * `frontend` 폴더를 생성하고 Vite 템플릿으로 React 개발 환경을 부트스트랩합니다.
+     ```bash
+     npx -y create-vite@latest frontend --template react
+     cd frontend
+     npm install
+     ```
+   * 필요한 의존성 라이브러리를 차례대로 설치합니다.
+     * UI/UX: `@clerk/clerk-react` (Clerk 웹 전용 인증), `lucide-react` (아이콘)
+     * 상태 / 통신: `zustand` (전역 상태 관리), `react-router-dom` (페이지 네비게이션)
+     * 스타일링: Tailwind CSS v4
+
+2. **Tailwind CSS v4 통합 및 글로벌 스타일 셋업**
+   * [vite.config.js](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/frontend/vite.config.js)에 Tailwind 플러그인을 바인딩합니다.
+   * [index.css](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/frontend/src/index.css) 파일에 `@import "tailwindcss";` 지시문을 선언하고, 슬레이트(Slate)와 인디고(Indigo)를 기조로 한 다크 모드(Dark Mode) 전용 글로벌 테마 토큰 및 그라데이션 설정을 구성합니다.
+
+3. **데이터 연동 레이어 및 API 캐싱 셋업**
+   * [mealAPI.js](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/frontend/src/services/mealAPI.js)를 작성합니다.
+     * 외부 TheMealDB REST API로부터 이름 검색, ID 조회, 카테고리 필터링 등을 수행하는 비동기 fetcher 모듈을 구축합니다.
+     * 불필요한 네트워크 대역폭 낭비를 억제하기 위해 메모리 맵(`Map`) 객체 기반의 API 캐시 저장소를 구현합니다.
+   * [useFavoriteStore.js](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/frontend/src/store/useFavoriteStore.js)를 작성합니다.
+     * Zustand 스토어를 이용해 즐겨찾기 상태를 전역화합니다.
+     * 사용자가 하트 토글 시, 백엔드 Express API (`POST`, `DELETE`, `GET`)와 비동기 연동되어 DB에 실시간 동기화하고 웹 화면 전체에 반영하는 논리를 작성합니다.
+
+4. **루트 라우팅 가드 및 Clerk 인증 통합**
+   * [main.jsx](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/frontend/src/main.jsx)에 라우팅 컨텍스트를 바인딩합니다.
+   * [App.jsx](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/frontend/src/App.jsx)를 설계합니다.
+     * 최상위를 `<ClerkProvider>`로 감싸고, 로그인 여부에 따라 특정 라우트를 보호하기 위해 `<SignedIn>`과 `<SignedOut>` 컨텍스트 가드를 설계합니다.
+     * `/`, `/search`, `/favorites`, `/recipe/:id` 등의 React Router v7 라우팅 지도를 매핑합니다.
+
+5. **공통 네비게이션 및 UI 컴포넌트 구현**
+   * [Header.jsx](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/frontend/src/components/Header.jsx): 로고, 메인 메뉴 링크 탭 및 Clerk의 `<UserButton>` 프로필 아바타를 포함해 심플하게 구성합니다.
+   * [RecipeCard.jsx](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/frontend/src/components/RecipeCard.jsx): 호버 효과 및 클릭 액션을 지원하고, 즐겨찾기 포함 상태(하트)를 실시간 바인딩하여 카드를 구조화합니다.
+
+6. **핵심 화면(Pages) 구현**
+   * [SignIn.jsx](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/frontend/src/pages/SignIn.jsx) / [SignUp.jsx](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/frontend/src/pages/SignUp.jsx): Clerk에서 빌트인으로 제공하는 로그인/회원가입 카드 인터페이스를 중앙 정렬 배치합니다.
+   * [Home.jsx](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/frontend/src/pages/Home.jsx): 오늘의 랜덤 요리 추천 배너 및 전체 카테고리(치킨, 비프 등) 탭 필터링 및 2열 반응형 그리드 무한 스크롤 목록을 제공합니다.
+   * [Search.jsx](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/frontend/src/pages/Search.jsx): 초기 검색 전에는 랜덤 6개의 요리 리스트를 제공하며, 검색 인풋 창에 `useDebounce` 기법(600ms 지연)을 심어 무차별적인 API 호출을 효과적으로 차단합니다.
+   * [RecipeDetail.jsx](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/frontend/src/pages/RecipeDetail.jsx): 조리 시간 및 원산지 메타 카드 4칸 배치, 준비된 식재료 체크리스트, 줄바꿈을 유려하게 파싱한 단계별 조리 가이드 카드 리스트, 유튜브 비디오 링크 컴포넌트를 코딩합니다.
+   * [Favorites.jsx](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/frontend/src/pages/Favorites.jsx): 나만의 즐겨찾기 수첩 화면을 구축하고, 추가적으로 총 요리 수 및 모든 저장 레시피의 평균 조리 시간(Avg. Cook Time)을 실시간으로 집계해 출력하는 대시보드 통계 카드 시스템을 구현합니다.
+
+---
+
+### 📱 3부: [Mobile Frontend] Expo 모바일 개발 순서
+Expo Router를 활용한 선언적 파일 기반 라우팅 및 햅틱 진동 피드백 등을 고루 갖춘 고성능 모바일 애플리케이션을 완성합니다.
+
+1. **Expo React Native 초기화 및 네이티브 라이브러리 연동**
+   * `mobile` 폴더를 생성하고 Expo 빈 템플릿으로 앱 프로젝트를 부트스트랩합니다.
+     ```bash
+     npx -y create-expo-app@latest mobile --template blank
+     cd mobile
+     npm install
+     ```
+   * 모바일 네이티브 최적화 및 인증에 특화된 패키지들을 설치합니다.
+     * 인증: `@clerk/expo` (Clerk Expo 전용), `expo-secure-store` (토큰 캐싱 암호화 저장소)
+     * 네이티브 인터랙션: `expo-haptics` (물리 진동 피드백), `@expo/vector-icons` (아이콘 팩)
+     * 성능 최적화: `expo-image` (고성능 BlurHash 및 로컬 디스크 캐시를 포함한 차세대 이미지 뷰어)
+     * 라우팅: `expo-router` v3 이상
+
+2. **최상위 엔트리 레이아웃 및 인증 흐름 구축**
+   * [tokenCache.ts](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/mobile/services/tokenCache.ts) 파일을 작성하여 Clerk의 세션 토큰을 `SecureStore`에 안전하게 Read/Write하도록 셋업합니다.
+   * [_layout.tsx](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/mobile/app/_layout.tsx) 파일을 선언합니다.
+     * `<ClerkProvider>`의 `tokenCache` 인자에 작성한 SecureStore 토큰 관리 인스턴스를 주입합니다.
+     * 비로그인 상태일 때는 Expo Router를 통해 비인증 경로인 `(auth)/sign-in`으로 사용자를 자동 바운스 처리하는 보안 흐름을 완성합니다.
+
+3. **모바일 전용 어댑터, 상수 및 스타일 시스템 정의**
+   * [api.js](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/mobile/constants/api.js)에 백엔드 통신용 Endpoint URL을 선언합니다. *(이동용 실기기 디바이스에서 로컬 백엔드를 볼 수 있도록 localhost가 아닌 개발 PC의 사설 IP 주소로 지정해야 합니다.)*
+   * [colors.js](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/mobile/constants/colors.js) 공통 테마 컬러 객체를 정의합니다.
+   * [recipe-detail.styles.js](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/mobile/assets/styles/recipe-detail.styles.js) 등 화면별 React Native 전용 `StyleSheet` 파일들을 assets 폴더 내에 일목요연하게 설계합니다.
+   * [mealAPI.js](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/mobile/services/mealAPI.js)를 코딩하여 원본 TheMealDB JSON 구조를 앱 사양 객체 포맷으로 변환하는 `transformMealData` 파서를 구성합니다.
+
+4. **네이티브 최적화 공통 UI 컴포넌트 개발**
+   * [SafeScreen.jsx](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/mobile/components/SafeScreen.jsx): 기기별 다른 상하단 노치를 방지하기 위해 `SafeAreaView`와 플랙스 셋업이 들어간 레이아웃 홀더를 컴포넌트화합니다.
+   * [RecipeItem.jsx](file:///Users/guniluk/Desktop/CLI/webMobile-recipe-all/mobile/components/RecipeItem.jsx): 그리드 카드로 렌더링되며, 로딩 지연을 없애고 세련된 느낌을 주기 위해 `expo-image` 컴포넌트에 `cachePolicy="memory-disk"`, `BlurHash` 플레이스홀더, 서서히 나타나는 `transition={300}`을 장착합니다.
+
+5. **인증 화면 설계 및 이메일 OTP 처리**
+   * `app/(auth)/sign-in.jsx` / `app/(auth)/sign-up.jsx` 파일을 빌드합니다.
+   * Clerk Expo API를 트리거하여 사용자의 이메일 주소를 확인하고, 즉각 발송된 6자리 임시 비밀번호 인증 코드(OTP)를 검증하여 세션을 활성화합니다.
+
+6. **Expo Router 파일 기반 화면(Screens) 상세 구축**
+   * **탭 네비게이터 레이아웃 (`app/(tabs)/_layout.jsx`)**: 하단에 깔끔한 3개 메뉴(Home, Search, Favorites) 아이콘을 지닌 탭 바를 설계합니다.
+   * **홈 화면 (`app/(tabs)/index.jsx`)**:
+     * 상단에 대형 슬라이드 형태의 추천 요리 배너(`LatestRecipe`)와 좌우 스크롤 방식의 카테고리 아이콘 바 필터 리스트를 연동합니다.
+     * 대규모 스크롤 시의 프레임 드랍 및 메모리 누수를 억제하기 위해 `FlatList`에 성능 옵션(`initialNumToRender={6}`, `windowSize={5}`, `removeClippedSubviews=true`)을 세밀하게 조율합니다.
+     * **탭 상태 보존 최적화**: 상세 화면에 진입했다가 다시 백 버튼으로 돌아왔을 때, 이전 카테고리 필터링 탭 선택지가 초기화되지 않고 유지되도록 모듈 범위 전역 변수(`lastSelectedCategory`)에 이전 선택 인덱스를 보관하여 로드 시 자동 세팅되도록 구현합니다.
+   * **검색 화면 (`app/(tabs)/search.jsx`)**: 입력창에 `600ms` 디바운스 디시전을 탑재하고 검색어가 비어 있을 시 랜덤 6개의 요리 리스트를 제안합니다.
+   * **즐겨찾기 화면 (`app/(tabs)/favorites.jsx`)**:
+     * 사용자가 저장한 총 레시피 개수 및 저장된 레시피들의 평균 조리 시간을 계산하여 멋진 요약 대시보드 통계 카드 영역을 렌더링합니다.
+     * 즐겨찾기 탭 진입 시 실시간으로 Neon DB로부터 새로운 데이터를 동기화하여 UI를 갱신합니다.
+   * **레시피 상세 화면 (`app/recipe/[id].jsx`)**:
+     * 즐겨찾기(하트) 버튼 터치 시, `expo-haptics`를 트리거하여 손끝에 리얼한 물리 진동 피드백(`Haptics.impactAsync`)을 주어 앱의 프리미엄 감성을 높입니다.
+     * 준비 완료한 식재료 체크박스 세트, 단계별 조리지침 목록, 유튜브 바로가기 버튼을 만듭니다.
+     * **텍스트 오버플로우 트러블슈팅**: 조리지침 카드(`flexDirection: "row"`) 내에서 내용 텍스트(`Text`)가 화면 밖으로 이탈하지 않도록 `instructionContent`(`flex: 1` 레이아웃) 스타일이 지정된 `View` 컨테이너로 텍스트 블록 전체를 감싸서 완벽히 박스 내로 줄바꿈 가이드라인을 강제합니다.
+
+---
 
 [⬆️ 목차로 돌아가기](#toc)
