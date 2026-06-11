@@ -6,13 +6,13 @@ import { useRouter } from "expo-router";
 import { COLORS } from "../constants/colors";
 import { recipeCardStyles } from "../assets/styles/home.styles";
 
-const RecipeItem = React.memo(({ item }) => {
+const RecipeItem = React.memo(({ item, from = "home" }) => {
   const router = useRouter();
 
   return (
     <TouchableOpacity
       style={[recipeCardStyles.container, { marginBottom: 12 }]}
-      onPress={() => router.push(`/recipe/${item.id}`)}
+      onPress={() => router.push(`/recipe/${item.id}?from=${from}`)}
       activeOpacity={0.8}
     >
       <View style={recipeCardStyles.imageContainer}>

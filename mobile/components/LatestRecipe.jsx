@@ -15,7 +15,7 @@ const LatestRecipe = React.memo(({ latestRecipe, recentSectionHeight }) => {
     <View style={homeStyles.featuredSection}>
       <TouchableOpacity
         style={[homeStyles.featuredCard, { height: recentSectionHeight }]}
-        onPress={() => router.push(`/recipe/${latestRecipe.id}`)}
+        onPress={() => router.push(`/recipe/${latestRecipe.id}?from=home`)}
         activeOpacity={0.85}
       >
         <Image

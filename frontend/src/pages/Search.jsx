@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { MealAPI } from '../services/mealAPI';
-import RecipeCard from '../components/RecipeCard';
-import { Search as SearchIcon, X, Sparkles, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { MealAPI } from "../services/mealAPI";
+import RecipeCard from "../components/RecipeCard";
+import { Search as SearchIcon, X, Sparkles, RefreshCw } from "lucide-react";
 
 // Helper function to filter out duplicate meals by id
 const filterUniqueMeals = (mealsArray) => {
   const seen = new Set();
-  return mealsArray.filter(meal => {
+  return mealsArray.filter((meal) => {
     if (!meal || !meal.id) return false;
     const isDuplicate = seen.has(meal.id);
     seen.add(meal.id);
@@ -15,95 +15,137 @@ const filterUniqueMeals = (mealsArray) => {
 };
 
 export default function Search() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [meals, setMeals] = useState([]);
+  const [initialMeals, setInitialMeals] = useState([]); // Backup of the first recommended random meals
   const [allFetchedMeals, setAllFetchedMeals] = useState([]);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isRandom, setIsRandom] = useState(true);
 
-  // 1. Fetch Random Meals
-  const fetchRandomMeals = useCallback(async () => {
-    setLoading(true);
-    try {
-      const rawMeals = await MealAPI.getRandomMeals(8); // Web shows 8 items instead of 6 for better grid layout
-      const transformed = rawMeals
-        .map(meal => MealAPI.transformMealData(meal))
-        .filter(meal => meal !== null);
-      setMeals(filterUniqueMeals(transformed));
-      setIsRandom(true);
-      setAllFetchedMeals([]);
-      setPage(0);
-    } catch (error) {
-      console.error('Failed to fetch random meals:', error);
-      setMeals([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const requestCountRef = useRef(0);
 
-  // 2. Fetch Search Results
-  const handleSearch = useCallback(async (query) => {
-    if (!query.trim()) {
-      fetchRandomMeals();
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      let rawMeals = await MealAPI.searchMealByName(query);
-      
-      // Fallback search by ingredient if name search yields nothing
-      if (!rawMeals || rawMeals.length === 0) {
-        rawMeals = await MealAPI.filterByIngredient(query);
+  // 1. Fetch Search Results
+  const handleSearch = useCallback(
+    async (query) => {
+      if (!query.trim()) {
+        setMeals(initialMeals);
+        setIsRandom(true);
+        setAllFetchedMeals([]);
+        setPage(0);
+        return;
       }
 
-      const transformed = rawMeals
-        .map(meal => MealAPI.transformMealData(meal))
-        .filter(meal => meal !== null);
-      
-      const uniqueMeals = filterUniqueMeals(transformed);
-      setAllFetchedMeals(uniqueMeals);
-      setPage(0);
-      setIsRandom(false);
-      
-      // Initially show first 12 items for search
-      setMeals(uniqueMeals.slice(0, 12));
-    } catch (error) {
-      console.error('Search failed:', error);
-      setMeals([]);
-      setAllFetchedMeals([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchRandomMeals]);
+      const currentRequestId = ++requestCountRef.current;
+      setLoading(true);
+      try {
+        let rawMeals = await MealAPI.searchMealByName(query);
+        if (currentRequestId !== requestCountRef.current) return;
 
-  // Load random meals on mount
-  useEffect(() => {
-    fetchRandomMeals();
-  }, [fetchRandomMeals]);
+        // Fallback search by ingredient if name search yields nothing
+        if (!rawMeals || rawMeals.length === 0) {
+          rawMeals = await MealAPI.filterByIngredient(query);
+          if (currentRequestId !== requestCountRef.current) return;
+        }
 
-  // Debounce search query (600ms)
+        const transformed = rawMeals
+          .map((meal) => MealAPI.transformMealData(meal))
+          .filter((meal) => meal !== null);
+
+        const uniqueMeals = filterUniqueMeals(transformed);
+        setAllFetchedMeals(uniqueMeals);
+        setPage(0);
+        setIsRandom(false);
+
+        // Initially show first 12 items for search
+        setMeals(uniqueMeals.slice(0, 12));
+      } catch (error) {
+        console.error("Search failed:", error);
+        if (currentRequestId === requestCountRef.current) {
+          setMeals([]);
+          setAllFetchedMeals([]);
+        }
+      } finally {
+        if (currentRequestId === requestCountRef.current) {
+          setLoading(false);
+        }
+      }
+    },
+    [initialMeals],
+  );
+
+  // Load random meals on mount (only once)
   useEffect(() => {
-    if (searchQuery.trim() === '') {
-      fetchRandomMeals();
+    const fetchInitialRandomMeals = async () => {
+      setLoading(true);
+      try {
+        const rawMeals = await MealAPI.getRandomMeals(8);
+        const transformed = rawMeals
+          .map((meal) => MealAPI.transformMealData(meal))
+          .filter((meal) => meal !== null);
+        const unique = filterUniqueMeals(transformed);
+        setMeals(unique);
+        setInitialMeals(unique);
+        setIsRandom(true);
+      } catch (error) {
+        console.error("Failed to fetch initial random meals:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInitialRandomMeals();
+  }, []);
+
+  // Debounce search query (300ms)
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      const setM = () => {
+        setMeals(initialMeals);
+      };
+      setM();
+
+      const setIsR = () => {
+        setIsRandom(true);
+      };
+      setIsR();
+
+      const setAll = () => {
+        setAllFetchedMeals([]);
+      };
+      setAll();
+
+      const setP = () => {
+        setPage(0);
+      };
+      setP();
       return;
     }
 
     const delayDebounceFn = setTimeout(() => {
       handleSearch(searchQuery);
-    }, 600);
+    }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, fetchRandomMeals, handleSearch]);
+  }, [searchQuery, initialMeals, handleSearch]);
 
-  // 3. Refresh Action (Only valid for random meals state)
+  // 2. Refresh Action (Only valid for random meals state)
   const onRefresh = async () => {
-    if (!isRandom) return;
+    if (!isRandom || refreshing) return;
     setRefreshing(true);
-    await fetchRandomMeals();
-    setRefreshing(false);
+    try {
+      const rawMeals = await MealAPI.getRandomMeals(8);
+      const transformed = rawMeals
+        .map((meal) => MealAPI.transformMealData(meal))
+        .filter((meal) => meal !== null);
+      const unique = filterUniqueMeals(transformed);
+      setMeals(unique);
+      setInitialMeals(unique);
+    } catch (error) {
+      console.error("Failed to refresh random meals:", error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // 4. Load More (Infinite scroll pagination)
@@ -115,7 +157,7 @@ export default function Search() {
 
     if (startIndex < allFetchedMeals.length) {
       const nextBatch = allFetchedMeals.slice(startIndex, startIndex + 12);
-      setMeals(prevMeals => filterUniqueMeals([...prevMeals, ...nextBatch]));
+      setMeals((prevMeals) => filterUniqueMeals([...prevMeals, ...nextBatch]));
       setPage(nextPage);
     }
   };
@@ -125,7 +167,6 @@ export default function Search() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 pb-16 pt-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
         {/* Page Title */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -145,7 +186,9 @@ export default function Search() {
               className="p-3 bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white rounded-2xl hover:bg-slate-800 transition-all duration-200"
               title="Shuffle random recipes"
             >
-              <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`}
+              />
             </button>
           )}
         </div>
@@ -164,7 +207,7 @@ export default function Search() {
           />
           {searchQuery.length > 0 && (
             <button
-              onClick={() => setSearchQuery('')}
+              onClick={() => setSearchQuery("")}
               className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-white transition-colors"
             >
               <X className="h-5 w-5" />
@@ -185,7 +228,9 @@ export default function Search() {
         {isRandom && (
           <div className="flex items-center space-x-2 pb-4 mb-8">
             <Sparkles className="h-5 w-5 text-indigo-400 fill-current" />
-            <h2 className="text-lg font-bold text-white">Recommended Recipes</h2>
+            <h2 className="text-lg font-bold text-white">
+              Recommended Recipes
+            </h2>
           </div>
         )}
 
@@ -201,9 +246,12 @@ export default function Search() {
             <div className="p-4 bg-slate-800/50 text-slate-500 rounded-full mb-6">
               <SearchIcon className="h-10 w-10" />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">No recipes found</h3>
+            <h3 className="text-xl font-bold text-white mb-2">
+              No recipes found
+            </h3>
             <p className="text-slate-400 text-sm max-w-xs leading-relaxed">
-              Try searching with different keywords like 'Chicken', 'Cake', or 'Rice'.
+              Try searching with different keywords like 'Chicken', 'Cake', or
+              'Rice'.
             </p>
           </div>
         ) : (

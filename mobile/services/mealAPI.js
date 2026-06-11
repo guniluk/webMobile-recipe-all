@@ -101,14 +101,49 @@ export const MealAPI = {
   //get multiple random meals
   getRandomMeals: async (count = 6) => {
     try {
-      const promises = Array(count)
-        .fill()
-        .map(() => MealAPI.getRandomMeal());
-      const results = await Promise.all(promises);
-      return results.filter((meal) => meal !== null);
+      // Choose a random letter to fetch a list of meals with a single request
+      const letters = "abcdefgiklmnprstvy";
+      const randomLetter = letters[Math.floor(Math.random() * letters.length)];
+      
+      const response = await fetch(`${BASE_URL}/search.php?f=${randomLetter}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch by letter");
+      }
+      const data = await response.json();
+      let meals = (data.meals || []).filter(hasImage);
+      
+      // Fallback if no meals found for the letter
+      if (meals.length === 0) {
+        const fallbackRes = await fetch(`${BASE_URL}/search.php?s=`);
+        const fallbackData = await fallbackRes.json();
+        meals = (fallbackData.meals || []).filter(hasImage);
+      }
+
+      // If we don't have enough meals, fallback to fetching single random meals in parallel (original behavior)
+      if (meals.length < count) {
+        const promises = Array(count)
+          .fill()
+          .map(() => MealAPI.getRandomMeal());
+        const results = await Promise.all(promises);
+        return results.filter((meal) => meal !== null);
+      }
+
+      // Shuffle and take 'count' meals
+      const shuffled = [...meals].sort(() => 0.5 - Math.random());
+      return shuffled.slice(0, count);
     } catch (error) {
-      console.log(error);
-      return [];
+      console.error("Error in getRandomMeals:", error);
+      // Absolute fallback: run original parallel fetches
+      try {
+        const promises = Array(count)
+          .fill()
+          .map(() => MealAPI.getRandomMeal());
+        const results = await Promise.all(promises);
+        return results.filter((meal) => meal !== null);
+      } catch (innerError) {
+        console.error(innerError);
+        return [];
+      }
     }
   },
 

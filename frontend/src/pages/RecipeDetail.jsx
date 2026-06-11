@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useUser } from '@clerk/clerk-react';
-import { useFavoriteStore } from '../store/useFavoriteStore';
-import { MealAPI } from '../services/mealAPI';
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useUser } from "@clerk/clerk-react";
+import { useFavoriteStore } from "../store/useFavoriteStore";
+import { MealAPI } from "../services/mealAPI";
 import {
   ArrowLeft,
   Heart,
@@ -15,12 +15,21 @@ import {
   BookOpen,
   Video,
   Check,
-} from 'lucide-react';
+} from "lucide-react";
 
 export default function RecipeDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useUser();
+
+  const handleBack = () => {
+    if (location.state && location.state.from) {
+      navigate(location.state.from);
+    } else {
+      navigate("/");
+    }
+  };
 
   const {
     fetchFavorites,
@@ -33,6 +42,11 @@ export default function RecipeDetail() {
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Scroll to top when recipe ID changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
+
   // 1. Fetch recipe detail and sync favorites state
   useEffect(() => {
     const loadRecipeData = async () => {
@@ -44,7 +58,7 @@ export default function RecipeDetail() {
           const transformed = MealAPI.transformMealData(rawMeal);
           setRecipe(transformed);
         } else {
-          alert('Recipe not found.');
+          alert("Recipe not found.");
           navigate(-1);
           return;
         }
@@ -54,7 +68,7 @@ export default function RecipeDetail() {
           await fetchFavorites(user.id);
         }
       } catch (error) {
-        console.error('Error loading recipe details:', error);
+        console.error("Error loading recipe details:", error);
       } finally {
         setLoading(false);
       }
@@ -68,7 +82,7 @@ export default function RecipeDetail() {
   // 2. Favorite Toggle Handler
   const handleToggleFavorite = useCallback(async () => {
     if (!user) {
-      alert('Please log in to save recipes to your favorites.');
+      alert("Please log in to save recipes to your favorites.");
       return;
     }
     if (!recipe || favoriteLoading) return;
@@ -81,7 +95,7 @@ export default function RecipeDetail() {
         await addFavorite(user.id, recipe);
       }
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      console.error("Error toggling favorite:", error);
     } finally {
       setFavoriteLoading(false);
     }
@@ -109,7 +123,7 @@ export default function RecipeDetail() {
           url: shareUrl,
         });
       } catch (error) {
-        console.error('Error sharing:', error);
+        console.error("Error sharing:", error);
       }
     } else {
       // Fallback: Copy link to clipboard
@@ -118,7 +132,7 @@ export default function RecipeDetail() {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch (err) {
-        console.error('Failed to copy link:', err);
+        console.error("Failed to copy link:", err);
       }
     }
   }, [recipe]);
@@ -139,7 +153,7 @@ export default function RecipeDetail() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         {/* Back Button */}
         <button
-          onClick={() => navigate(-1)}
+          onClick={handleBack}
           className="mb-6 flex items-center space-x-2 text-slate-400 hover:text-white font-bold transition-colors bg-slate-900 border border-slate-800/80 hover:border-slate-700 px-4 py-2 rounded-2xl"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -150,13 +164,13 @@ export default function RecipeDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
           {/* Left Column: Image and Meta Cards */}
           <div className="lg:col-span-5 flex flex-col space-y-6">
-            <div className="relative aspect-square sm:aspect-[4/3] lg:aspect-square w-full rounded-3xl overflow-hidden shadow-2xl border border-slate-800">
+            <div className="relative aspect-square sm:aspect-4/3 lg:aspect-square w-full rounded-3xl overflow-hidden shadow-2xl border border-slate-800">
               <img
                 src={recipe.imageUrl}
                 alt={recipe.title}
                 className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-linear-to-t from-slate-950 via-transparent to-transparent" />
 
               {/* Overlay Share & Favorite floating buttons */}
               <div className="absolute top-4 right-4 flex space-x-2">
@@ -170,7 +184,7 @@ export default function RecipeDetail() {
                     <Share2 className="h-4 w-4" />
                   )}
                   <span className="text-xs font-bold">
-                    {copied ? 'Copied!' : 'Share'}
+                    {copied ? "Copied!" : "Share"}
                   </span>
                 </button>
               </div>
@@ -181,7 +195,7 @@ export default function RecipeDetail() {
               <div className="bg-slate-900 border border-slate-800 p-4 rounded-3xl flex flex-col items-center justify-center text-center shadow-md">
                 <Clock className="h-5 w-5 text-indigo-400 mb-2" />
                 <span className="text-white font-black text-sm">
-                  {recipe.cookTime || '30m'}
+                  {recipe.cookTime || "30m"}
                 </span>
                 <span className="text-slate-400 text-xs mt-1 font-medium">
                   Cook Time
@@ -190,7 +204,7 @@ export default function RecipeDetail() {
               <div className="bg-slate-900 border border-slate-800 p-4 rounded-3xl flex flex-col items-center justify-center text-center shadow-md">
                 <Users className="h-5 w-5 text-indigo-400 mb-2" />
                 <span className="text-white font-black text-sm">
-                  {recipe.servings || '4'}
+                  {recipe.servings || "4"}
                 </span>
                 <span className="text-slate-400 text-xs mt-1 font-medium">
                   Servings
@@ -208,7 +222,7 @@ export default function RecipeDetail() {
               <div className="bg-slate-900 border border-slate-800 p-4 rounded-3xl flex flex-col items-center justify-center text-center shadow-md">
                 <Globe className="h-5 w-5 text-indigo-400 mb-2" />
                 <span className="text-white font-black text-sm truncate max-w-full px-1">
-                  {recipe.area || 'Anywhere'}
+                  {recipe.area || "Anywhere"}
                 </span>
                 <span className="text-slate-400 text-xs mt-1 font-medium">
                   Origin
@@ -234,21 +248,21 @@ export default function RecipeDetail() {
               <button
                 onClick={handleToggleFavorite}
                 disabled={favoriteLoading}
-                className={`flex-shrink-0 flex items-center justify-center space-x-2 px-6 py-3.5 rounded-2xl font-bold shadow-md transition-all duration-200 border ${
+                className={`shrink-0 flex items-center justify-center space-x-2 px-6 py-3.5 rounded-2xl font-bold shadow-md transition-all duration-200 border ${
                   isFavorite
-                    ? 'bg-rose-500 hover:bg-rose-600 border-rose-400/20 text-white'
-                    : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-white'
+                    ? "bg-rose-500 hover:bg-rose-600 border-rose-400/20 text-white"
+                    : "bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-white"
                 }`}
               >
                 {favoriteLoading ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-current"></div>
                 ) : (
                   <Heart
-                    className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`}
+                    className={`h-5 w-5 ${isFavorite ? "fill-current" : ""}`}
                   />
                 )}
                 <span>
-                  {isFavorite ? 'Saved to Favorites' : 'Add to Favorites'}
+                  {isFavorite ? "Saved to Favorites" : "Add to Favorites"}
                 </span>
               </button>
             </div>
@@ -276,7 +290,7 @@ export default function RecipeDetail() {
                       key={idx}
                       className="flex items-start space-x-3 text-slate-300 text-sm"
                     >
-                      <div className="mt-1 flex-shrink-0 w-4 h-4 rounded border border-indigo-500/50 bg-indigo-500/10 flex items-center justify-center">
+                      <div className="mt-1 shrink-0 w-4 h-4 rounded border border-indigo-500/50 bg-indigo-500/10 flex items-center justify-center">
                         <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
                       </div>
                       <span className="font-medium leading-tight">{item}</span>
@@ -306,7 +320,7 @@ export default function RecipeDetail() {
                       key={idx}
                       className="bg-slate-900/40 border border-slate-800/80 hover:border-slate-800 p-5 rounded-3xl flex items-start space-x-4 transition-colors"
                     >
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-600/20 text-indigo-400 border border-indigo-500/25 flex items-center justify-center font-black text-sm">
+                      <div className="shrink-0 w-8 h-8 rounded-full bg-indigo-600/20 text-indigo-400 border border-indigo-500/25 flex items-center justify-center font-black text-sm">
                         {idx + 1}
                       </div>
                       <p className="text-slate-300 text-sm sm:text-base leading-relaxed font-medium">

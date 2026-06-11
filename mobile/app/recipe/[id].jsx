@@ -19,11 +19,12 @@ import { COLORS } from "../../constants/colors";
 import { MealAPI } from "../../services/mealAPI";
 import { API_URL } from "../../constants/api";
 import * as Haptics from "expo-haptics";
+import { recipeDetailStyles } from "../../assets/styles/recipe-detail.styles";
 
 const { width } = Dimensions.get("window");
 
 const RecipeDetailScreen = () => {
-  const { id } = useLocalSearchParams();
+  const { id, from } = useLocalSearchParams();
   const router = useRouter();
   const { user } = useUser();
 
@@ -31,6 +32,23 @@ const RecipeDetailScreen = () => {
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
+
+  // 뒤로가기 공통 처리 핸들러
+  const handleBack = useCallback(() => {
+    if (from === "favorites") {
+      router.replace("/(tabs)/favorites");
+    } else if (from === "search") {
+      router.replace("/(tabs)/search");
+    } else if (from === "home") {
+      router.replace("/(tabs)");
+    } else {
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace("/(tabs)");
+      }
+    }
+  }, [from, router]);
 
   // 1. 레시피 상세 데이터 & 즐겨찾기 상태 조회
   useEffect(() => {
@@ -45,7 +63,7 @@ const RecipeDetailScreen = () => {
           setRecipe(transformed);
         } else {
           Alert.alert("Error", "Recipe not found.");
-          router.back();
+          handleBack();
           return;
         }
 
@@ -68,7 +86,7 @@ const RecipeDetailScreen = () => {
     };
 
     loadRecipeData();
-  }, [id, user]);
+  }, [id, user, handleBack]);
 
   // 2. 즐겨찾기 추가/삭제 토글 - useCallback 적용
   const handleToggleFavorite = useCallback(async () => {
@@ -165,49 +183,63 @@ const RecipeDetailScreen = () => {
   if (!recipe) return null;
 
   return (
-    <View style={[styles.container, { backgroundColor: COLORS.background }]}>
+    <View
+      style={[
+        recipeDetailStyles.container,
+        { backgroundColor: COLORS.background },
+      ]}
+    >
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         {/* 상단 이미지 배너 */}
-        <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: recipe.imageUrl }}
-            style={styles.image}
-            contentFit="cover"
-            transition={300}
-            cachePolicy="memory-disk"
-            priority="high"
-            placeholder={{ blurhash: "L6PZvn%e00t7_3afQ-fQ00ae~qj[" }}
-          />
+        <View style={recipeDetailStyles.headerContainer}>
+          <View style={recipeDetailStyles.imageContainer}>
+            <Image
+              source={{ uri: recipe.imageUrl }}
+              style={recipeDetailStyles.headerImage}
+              contentFit="cover"
+              transition={300}
+              cachePolicy="memory-disk"
+              priority="high"
+              placeholder={{ blurhash: "L6PZvn%e00t7_3afQ-fQ00ae~qj[" }}
+            />
+          </View>
           <View style={styles.imageOverlay} />
 
-          {/* 플로팅 뒤로가기 버튼 */}
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="arrow-back" size={24} color={COLORS.white} />
-          </TouchableOpacity>
+          <View style={recipeDetailStyles.floatingButtons}>
+            {/* 플로팅 뒤로가기 버튼 */}
+            <TouchableOpacity
+              style={recipeDetailStyles.floatingButton}
+              onPress={handleBack}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="arrow-back" size={24} color={COLORS.white} />
+            </TouchableOpacity>
 
-          {/* 플로팅 공유 버튼 */}
-          <TouchableOpacity
-            style={styles.shareButton}
-            onPress={handleShare}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="share-social-outline"
-              size={22}
-              color={COLORS.white}
-            />
-          </TouchableOpacity>
+            {/* 플로팅 공유 버튼 */}
+            <TouchableOpacity
+              style={recipeDetailStyles.floatingButton}
+              onPress={handleShare}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="share-social-outline"
+                size={22}
+                color={COLORS.white}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* 바디 콘텐츠 */}
-        <View style={[styles.cardContainer, { backgroundColor: COLORS.card }]}>
+        <View
+          style={[
+            recipeDetailStyles.contentSection,
+            { backgroundColor: COLORS.card },
+          ]}
+        >
           {/* 타이틀 및 즐겨찾기 토글 영역 */}
           <View style={styles.titleRow}>
             <View style={styles.titleCol}>
@@ -252,10 +284,17 @@ const RecipeDetailScreen = () => {
               style={[styles.metaCard, { backgroundColor: COLORS.background }]}
             >
               <Ionicons name="time" size={20} color={COLORS.primary} />
-              <Text style={[styles.metaVal, { color: COLORS.text }]}>
+              <Text
+                style={[recipeDetailStyles.statValue, { color: COLORS.text }]}
+              >
                 {recipe.cookTime || "30m"}
               </Text>
-              <Text style={[styles.metaLabel, { color: COLORS.textLight }]}>
+              <Text
+                style={[
+                  recipeDetailStyles.statLabel,
+                  { color: COLORS.textLight },
+                ]}
+              >
                 Cook Time
               </Text>
             </View>
@@ -264,10 +303,17 @@ const RecipeDetailScreen = () => {
               style={[styles.metaCard, { backgroundColor: COLORS.background }]}
             >
               <Ionicons name="people" size={20} color={COLORS.primary} />
-              <Text style={[styles.metaVal, { color: COLORS.text }]}>
+              <Text
+                style={[recipeDetailStyles.statValue, { color: COLORS.text }]}
+              >
                 {recipe.servings || "4"}
               </Text>
-              <Text style={[styles.metaLabel, { color: COLORS.textLight }]}>
+              <Text
+                style={[
+                  recipeDetailStyles.statLabel,
+                  { color: COLORS.textLight },
+                ]}
+              >
                 Servings
               </Text>
             </View>
@@ -277,12 +323,17 @@ const RecipeDetailScreen = () => {
             >
               <Ionicons name="restaurant" size={20} color={COLORS.primary} />
               <Text
-                style={[styles.metaVal, { color: COLORS.text }]}
+                style={[recipeDetailStyles.statValue, { color: COLORS.text }]}
                 numberOfLines={1}
               >
                 {recipe.category}
               </Text>
-              <Text style={[styles.metaLabel, { color: COLORS.textLight }]}>
+              <Text
+                style={[
+                  recipeDetailStyles.statLabel,
+                  { color: COLORS.textLight },
+                ]}
+              >
                 Category
               </Text>
             </View>
@@ -292,45 +343,49 @@ const RecipeDetailScreen = () => {
             >
               <Ionicons name="globe" size={20} color={COLORS.primary} />
               <Text
-                style={[styles.metaVal, { color: COLORS.text }]}
+                style={[recipeDetailStyles.statValue, { color: COLORS.text }]}
                 numberOfLines={1}
               >
                 {recipe.area}
               </Text>
-              <Text style={[styles.metaLabel, { color: COLORS.textLight }]}>
+              <Text
+                style={[
+                  recipeDetailStyles.statLabel,
+                  { color: COLORS.textLight },
+                ]}
+              >
                 Origin
               </Text>
             </View>
           </View>
 
           {/* 재료 리스트 Section */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
+          <View style={recipeDetailStyles.sectionContainer}>
+            <View style={recipeDetailStyles.sectionTitleRow}>
               <Ionicons name="list" size={20} color={COLORS.primary} />
-              <Text style={[styles.sectionTitle, { color: COLORS.text }]}>
+              <Text
+                style={[
+                  recipeDetailStyles.sectionTitle,
+                  { color: COLORS.text },
+                ]}
+              >
                 Ingredients
               </Text>
             </View>
-            <View style={[styles.sectionCard, { borderColor: COLORS.border }]}>
+            <View style={recipeDetailStyles.ingredientsGrid}>
               {recipe.ingredients && recipe.ingredients.length > 0 ? (
                 recipe.ingredients.map((item, idx) => (
-                  <View
-                    key={idx}
-                    style={[
-                      styles.ingredientItem,
-                      idx < recipe.ingredients.length - 1 && {
-                        borderBottomWidth: 1,
-                        borderBottomColor: COLORS.border + "40",
-                      },
-                    ]}
-                  >
+                  <View key={idx} style={recipeDetailStyles.ingredientCard}>
                     <Ionicons
                       name="checkbox-outline"
                       size={18}
                       color={COLORS.primary}
                     />
                     <Text
-                      style={[styles.ingredientText, { color: COLORS.text }]}
+                      style={[
+                        recipeDetailStyles.ingredientText,
+                        { color: COLORS.text },
+                      ]}
                     >
                       {item}
                     </Text>
@@ -345,41 +400,55 @@ const RecipeDetailScreen = () => {
           </View>
 
           {/* 조리 순서 Section */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
+          <View style={recipeDetailStyles.sectionContainer}>
+            <View style={recipeDetailStyles.sectionTitleRow}>
               <Ionicons name="book-outline" size={20} color={COLORS.primary} />
-              <Text style={[styles.sectionTitle, { color: COLORS.text }]}>
+              <Text
+                style={[
+                  recipeDetailStyles.sectionTitle,
+                  { color: COLORS.text },
+                ]}
+              >
                 Instructions
               </Text>
             </View>
-            {recipe.instructions && recipe.instructions.length > 0 ? (
-              recipe.instructions.map((step, idx) => (
-                <View
-                  key={idx}
-                  style={[styles.stepCard, { borderColor: COLORS.border }]}
-                >
-                  <View
-                    style={[
-                      styles.stepBadge,
-                      { backgroundColor: COLORS.primary },
-                    ]}
-                  >
-                    <Text style={styles.stepBadgeText}>{idx + 1}</Text>
+            <View style={recipeDetailStyles.instructionsContainer}>
+              {recipe.instructions && recipe.instructions.length > 0 ? (
+                recipe.instructions.map((step, idx) => (
+                  <View key={idx} style={recipeDetailStyles.instructionCard}>
+                    <View
+                      style={[
+                        recipeDetailStyles.stepIndicator,
+                        { backgroundColor: COLORS.primary },
+                      ]}
+                    >
+                      <Text style={recipeDetailStyles.stepNumber}>
+                        {idx + 1}
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        recipeDetailStyles.instructionText,
+                        { color: COLORS.text, marginBottom: 0 },
+                      ]}
+                    >
+                      {step}
+                    </Text>
                   </View>
-                  <Text style={[styles.stepText, { color: COLORS.text }]}>
-                    {step}
+                ))
+              ) : (
+                <View
+                  style={[
+                    recipeDetailStyles.sectionCard,
+                    { borderColor: COLORS.border },
+                  ]}
+                >
+                  <Text style={{ color: COLORS.textLight, padding: 12 }}>
+                    No instructions info.
                   </Text>
                 </View>
-              ))
-            ) : (
-              <View
-                style={[styles.sectionCard, { borderColor: COLORS.border }]}
-              >
-                <Text style={{ color: COLORS.textLight, padding: 12 }}>
-                  No instructions info.
-                </Text>
-              </View>
-            )}
+              )}
+            </View>
           </View>
 
           {/* 유튜브 튜토리얼 비디오 링크 */}
@@ -402,9 +471,6 @@ const RecipeDetailScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -418,48 +484,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
   },
-  imageContainer: {
-    width: width,
-    height: 320,
-    position: "relative",
-  },
-  image: {
-    width: "100%",
-    height: "100%",
-  },
   imageOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0, 0, 0, 0.25)",
-  },
-  backButton: {
-    position: "absolute",
-    top: 50,
-    left: 20,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  shareButton: {
-    position: "absolute",
-    top: 50,
-    right: 20,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cardContainer: {
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    marginTop: -30,
-    paddingHorizontal: 20,
-    paddingTop: 30,
-    flex: 1,
   },
   titleRow: {
     flexDirection: "row",
@@ -512,73 +539,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-  },
-  metaVal: {
-    fontSize: 15,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  metaLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  section: {
-    marginBottom: 30,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  sectionCard: {
-    borderWidth: 1,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  ingredientItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  ingredientText: {
-    fontSize: 15,
-    fontWeight: "500",
-    flex: 1,
-  },
-  stepCard: {
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-  },
-  stepBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 2,
-  },
-  stepBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  stepText: {
-    fontSize: 15,
-    lineHeight: 22,
-    fontWeight: "500",
-    flex: 1,
   },
   youtubeButton: {
     backgroundColor: "#FF0000",

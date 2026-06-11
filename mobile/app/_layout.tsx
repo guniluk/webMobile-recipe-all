@@ -1,13 +1,13 @@
-import { Slot } from 'expo-router';
-import { ClerkProvider } from '@clerk/expo';
-import { tokenCache } from '../services/tokenCache';
-import SafeScreen from '../components/SafeScreen';
+import { Slot } from "expo-router";
+import { ClerkProvider } from "@clerk/expo";
+import { tokenCache } from "../services/tokenCache";
+import SafeScreen from "../components/SafeScreen";
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 if (!publishableKey) {
   throw new Error(
-    'Missing Publishable Key. Please set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in your .env file.',
+    "Missing Publishable Key. Please set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in your .env file.",
   );
 }
 

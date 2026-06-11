@@ -47,17 +47,21 @@ const SignInScreen = () => {
       if (signInResult?.error) {
         const clerkError = signInResult.error;
         const errorToThrow = new Error(clerkError.message || "Sign in failed.");
-        errorToThrow.errors = clerkError.errors || (clerkError.message ? [clerkError] : []);
+        errorToThrow.errors =
+          clerkError.errors || (clerkError.message ? [clerkError] : []);
         throw errorToThrow;
       }
 
       // 2. Clerk 응답이 { result } 래핑 구조를 가질 경우 실제 SignInResource 추출
-      const actualResult = signInResult?.result ? signInResult.result : signInResult;
+      const actualResult = signInResult?.result
+        ? signInResult.result
+        : signInResult;
       const status = actualResult?.status || signIn.status;
 
       if (status === "complete") {
-        const createdSessionId = actualResult?.createdSessionId || signIn.createdSessionId;
-        
+        const createdSessionId =
+          actualResult?.createdSessionId || signIn.createdSessionId;
+
         if (createdSessionId) {
           await setActive({ session: createdSessionId });
           router.push("/(tabs)");
@@ -67,13 +71,17 @@ const SignInScreen = () => {
             navigate: (to) => router.push(to),
           });
         } else {
-          throw new Error("Session ID not found and finalize method is missing.");
+          throw new Error(
+            "Session ID not found and finalize method is missing.",
+          );
         }
       } else if (status === "needs_client_trust") {
         // 새로운 환경이나 기기에서 로그인할 때 기기 신뢰(Client Trust) 수립을 위해 이메일 코드 인증 필요
-        const emailCodeFactor = (actualResult?.supportedSecondFactors || signIn?.supportedSecondFactors || []).find(
-          (factor) => factor.strategy === "email_code"
-        );
+        const emailCodeFactor = (
+          actualResult?.supportedSecondFactors ||
+          signIn?.supportedSecondFactors ||
+          []
+        ).find((factor) => factor.strategy === "email_code");
 
         if (emailCodeFactor) {
           if (typeof signIn.prepareSecondFactor === "function") {
@@ -81,18 +89,27 @@ const SignInScreen = () => {
           } else if (typeof signIn.mfa?.sendEmailCode === "function") {
             await signIn.mfa.sendEmailCode();
           } else {
-            throw new Error("No method found to prepare second factor verification.");
+            throw new Error(
+              "No method found to prepare second factor verification.",
+            );
           }
           setPendingClientTrust(true);
-          Alert.alert("Device Verification", "This looks like a new device. A verification code has been sent to your email.");
+          Alert.alert(
+            "Device Verification",
+            "This looks like a new device. A verification code has been sent to your email.",
+          );
         } else {
-          Alert.alert("Security Check Required", "Your account requires multi-factor authentication, but email verification strategy is not configured.");
+          Alert.alert(
+            "Security Check Required",
+            "Your account requires multi-factor authentication, but email verification strategy is not configured.",
+          );
         }
       } else {
         Alert.alert("Error", `Failed to sign in. Status: ${status}`);
       }
     } catch (err) {
-      const errorMessage = err.errors?.[0]?.message || err.message || "Sign in failed";
+      const errorMessage =
+        err.errors?.[0]?.message || err.message || "Sign in failed";
       Alert.alert("Error", errorMessage);
     } finally {
       setLoading(false);
@@ -115,22 +132,32 @@ const SignInScreen = () => {
           code: verificationCode,
         });
       } else if (typeof signIn.mfa?.verifyEmailCode === "function") {
-        completeSignIn = await signIn.mfa.verifyEmailCode({ code: verificationCode });
+        completeSignIn = await signIn.mfa.verifyEmailCode({
+          code: verificationCode,
+        });
       } else {
-        throw new Error("Verification method not found on Clerk signIn object.");
+        throw new Error(
+          "Verification method not found on Clerk signIn object.",
+        );
       }
 
       // 만약 에러가 리턴된 경우 throw
       if (completeSignIn?.error) {
         const clerkError = completeSignIn.error;
-        const errorToThrow = new Error(clerkError.message || "Verification failed.");
-        errorToThrow.errors = clerkError.errors || (clerkError.message ? [clerkError] : []);
+        const errorToThrow = new Error(
+          clerkError.message || "Verification failed.",
+        );
+        errorToThrow.errors =
+          clerkError.errors || (clerkError.message ? [clerkError] : []);
         throw errorToThrow;
       }
 
-      const actualComplete = completeSignIn?.result ? completeSignIn.result : completeSignIn;
+      const actualComplete = completeSignIn?.result
+        ? completeSignIn.result
+        : completeSignIn;
       const status = actualComplete?.status || signIn.status;
-      const createdSessionId = actualComplete?.createdSessionId || signIn.createdSessionId;
+      const createdSessionId =
+        actualComplete?.createdSessionId || signIn.createdSessionId;
 
       if (status === "complete" || createdSessionId) {
         if (createdSessionId) {
@@ -145,7 +172,8 @@ const SignInScreen = () => {
         Alert.alert("Error", `Verification failed. Status: ${status}`);
       }
     } catch (err) {
-      const errorMessage = err.errors?.[0]?.message || err.message || "Invalid verification code.";
+      const errorMessage =
+        err.errors?.[0]?.message || err.message || "Invalid verification code.";
       Alert.alert("Verification Failed", errorMessage);
     } finally {
       setLoading(false);
@@ -175,7 +203,7 @@ const SignInScreen = () => {
 
               <Text style={authStyles.title}>Recipe App</Text>
               <Text style={authStyles.subtitle}>
-                Welcome Back! Please login to your account
+                Welcome Back! Please login to your account^^
               </Text>
 
               <View style={authStyles.formContainer}>

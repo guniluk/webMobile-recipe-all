@@ -1,6 +1,7 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
-const API_URL = import.meta.env.VITE_API_URL || "https://webmobile-recipe.onrender.com/api";
+const API_URL =
+  import.meta.env.VITE_API_URL || "https://webmobile-recipe.onrender.com/api";
 
 export const useFavoriteStore = create((set, get) => ({
   favorites: [],
@@ -62,12 +63,17 @@ export const useFavoriteStore = create((set, get) => ({
   removeFavorite: async (userId, recipeId) => {
     if (!userId) return;
     try {
-      const response = await fetch(`${API_URL}/favorites/${userId}/${recipeId}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `${API_URL}/favorites/${userId}/${recipeId}`,
+        {
+          method: "DELETE",
+        },
+      );
       if (response.ok) {
         set((state) => ({
-          favorites: state.favorites.filter((fav) => fav.recipeId !== parseInt(recipeId)),
+          favorites: state.favorites.filter(
+            (fav) => fav.recipeId !== parseInt(recipeId),
+          ),
         }));
         return true;
       }

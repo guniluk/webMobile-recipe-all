@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useUser } from '@clerk/clerk-react';
-import { MealAPI } from '../services/mealAPI';
-import RecipeCard from '../components/RecipeCard';
-import LatestRecipe from '../components/LatestRecipe';
-import { RefreshCw, ChefHat } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useUser } from "@clerk/clerk-react";
+import { MealAPI } from "../services/mealAPI";
+import RecipeCard from "../components/RecipeCard";
+import LatestRecipe from "../components/LatestRecipe";
+import { RefreshCw, ChefHat } from "lucide-react";
 
 export default function Home() {
   const { user } = useUser();
@@ -42,21 +42,27 @@ export default function Home() {
         setLatestRecipe({
           id: transformed.id,
           title: transformed.title,
-          time: '25m',
-          servings: '2 Servings',
+          time: "25m",
+          servings: "2 Servings",
           image: transformed.imageUrl,
-          area: transformed.area && transformed.area !== 'Unknown' ? transformed.area : 'Anywhere',
+          area:
+            transformed.area && transformed.area !== "Unknown"
+              ? transformed.area
+              : "Anywhere",
         });
       }
     } catch (error) {
-      console.error('Failed to fetch initial data:', error);
+      console.error("Failed to fetch initial data:", error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchInitialData();
+    const fetchInit = () => {
+      fetchInitialData();
+    };
+    fetchInit();
   }, []);
 
   // 2. Fetch Recipes by Category
@@ -79,8 +85,8 @@ export default function Home() {
         id: meal.idMeal,
         title: meal.strMeal,
         image: meal.strMealThumb,
-        time: '30m',
-        servings: '4',
+        time: "30m",
+        servings: "4",
         area: null,
       }));
 
@@ -94,25 +100,33 @@ export default function Home() {
           return {
             ...recipe,
             description: detail?.strInstructions
-              ? detail.strInstructions.replace(/[\r\n]+/g, ' ').substring(0, 80) + '...'
-              : 'Delicious meal from TheMealDB',
-            area: detail && detail.strArea && detail.strArea !== 'Unknown' ? detail.strArea : 'Anywhere',
+              ? detail.strInstructions
+                  .replace(/[\r\n]+/g, " ")
+                  .substring(0, 80) + "..."
+              : "Delicious meal from TheMealDB",
+            area:
+              detail && detail.strArea && detail.strArea !== "Unknown"
+                ? detail.strArea
+                : "Anywhere",
           };
-        })
+        }),
       );
 
       setDisplayedRecipes(detailedBatch);
       setPage(1);
       setHasMore(formattedRecipes.length > 8);
     } catch (error) {
-      console.error('Failed to fetch recipes:', error);
+      console.error("Failed to fetch recipes:", error);
     } finally {
       setRecipesLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchRecipes();
+    const fetchRe = () => {
+      fetchRecipes();
+    };
+    fetchRe();
   }, [selectedCategory, categories]);
 
   // 3. Load More Recipes (Web version pagination)
@@ -138,23 +152,30 @@ export default function Home() {
           return {
             ...recipe,
             description: detail?.strInstructions
-              ? detail.strInstructions.replace(/[\r\n]+/g, ' ').substring(0, 80) + '...'
-              : 'Delicious meal from TheMealDB',
-            area: detail && detail.strArea && detail.strArea !== 'Unknown' ? detail.strArea : 'Anywhere',
+              ? detail.strInstructions
+                  .replace(/[\r\n]+/g, " ")
+                  .substring(0, 80) + "..."
+              : "Delicious meal from TheMealDB",
+            area:
+              detail && detail.strArea && detail.strArea !== "Unknown"
+                ? detail.strArea
+                : "Anywhere",
           };
-        })
+        }),
       );
 
       setDisplayedRecipes((prev) => {
-        const prevIds = new Set(prev.map(item => item.id));
-        const filteredNext = detailedNextBatch.filter(item => !prevIds.has(item.id));
+        const prevIds = new Set(prev.map((item) => item.id));
+        const filteredNext = detailedNextBatch.filter(
+          (item) => !prevIds.has(item.id),
+        );
         return [...prev, ...filteredNext];
       });
 
       setPage(nextPage);
       setHasMore(allRecipes.length > itemsToLoad);
     } catch (error) {
-      console.error('Error loading more recipes:', error);
+      console.error("Error loading more recipes:", error);
     } finally {
       setLoadingMore(false);
     }
@@ -170,8 +191,8 @@ export default function Home() {
     setRefreshing(false);
   };
 
-  const userEmail = user?.emailAddresses?.[0]?.emailAddress || 'Guest';
-  const userNickName = userEmail.split('@')[0];
+  const userEmail = user?.emailAddresses?.[0]?.emailAddress || "Guest";
+  const userNickName = userEmail.split("@")[0];
 
   if (loading) {
     return (
@@ -192,7 +213,8 @@ export default function Home() {
               <span>Hello, {userNickName}!</span>
             </h1>
             <p className="text-slate-400 mt-2 text-sm sm:text-base">
-              Find recipes, filter by category and discover new dishes to cook today.
+              Find recipes, filter by category and discover new dishes to cook
+              today.
             </p>
           </div>
           <button
@@ -201,7 +223,9 @@ export default function Home() {
             className="p-3 bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white rounded-2xl hover:bg-slate-800 transition-all duration-200"
             title="Refresh recipes"
           >
-            <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`}
+            />
           </button>
         </div>
 
@@ -215,8 +239,10 @@ export default function Home() {
 
       {/* Category Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-        <h2 className="text-xl sm:text-2xl font-bold text-white mb-6">Categories</h2>
-        
+        <h2 className="text-xl sm:text-2xl font-bold text-white mb-6">
+          Categories
+        </h2>
+
         {/* Horizontal Category Scroll */}
         <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
           {categories.map((cat) => {
@@ -225,10 +251,10 @@ export default function Home() {
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`flex-shrink-0 flex items-center space-x-3 px-5 py-3.5 rounded-2xl transition-all duration-200 border ${
+                className={`shrink-0 flex items-center space-x-3 px-5 py-3.5 rounded-2xl transition-all duration-200 border ${
                   isSelected
-                    ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/20 scale-105'
-                    : 'bg-slate-900 border-slate-800/80 text-slate-300 hover:border-slate-700 hover:text-white'
+                    ? "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/20 scale-105"
+                    : "bg-slate-900 border-slate-800/80 text-slate-300 hover:border-slate-700 hover:text-white"
                 }`}
               >
                 <img
@@ -246,7 +272,8 @@ export default function Home() {
       {/* Recipe List Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h2 className="text-xl sm:text-2xl font-bold text-white mb-6">
-          Recipes in {categories.find((cat) => cat.id === selectedCategory)?.name || ''}
+          Recipes in{" "}
+          {categories.find((cat) => cat.id === selectedCategory)?.name || ""}
         </h2>
 
         {recipesLoading && displayedRecipes.length === 0 ? (
@@ -256,7 +283,9 @@ export default function Home() {
           </div>
         ) : displayedRecipes.length === 0 ? (
           <div className="text-center py-24 bg-slate-900/40 rounded-3xl border border-slate-800/80">
-            <p className="text-slate-400 text-lg">No recipes found in this category.</p>
+            <p className="text-slate-400 text-lg">
+              No recipes found in this category.
+            </p>
           </div>
         ) : (
           <>

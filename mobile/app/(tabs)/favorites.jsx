@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -27,17 +27,17 @@ const FavoritesScreen = () => {
   const [loading, setLoading] = useState(false);
 
   const handleSignOut = useCallback(() => {
-    Alert.alert('Logout', 'Are you sure you want to log out?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert("Logout", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
       {
-        text: 'Logout',
-        style: 'destructive',
+        text: "Logout",
+        style: "destructive",
         onPress: async () => {
           try {
             await signOut();
-            router.replace('/sign-in');
+            router.replace("/sign-in");
           } catch (err) {
-            Alert.alert('Error', `error: ${JSON.stringify(err)}`);
+            Alert.alert("Error", `error: ${JSON.stringify(err)}`);
           }
         },
       },
@@ -70,27 +70,30 @@ const FavoritesScreen = () => {
   );
 
   // 즐겨찾기 목록에서 삭제
-  const handleRemoveFavorite = useCallback(async (recipeId) => {
-    if (!user) return;
-    try {
-      const response = await fetch(
-        `${API_URL}/favorites/${user.id}/${recipeId}`,
-        {
-          method: "DELETE",
-        },
-      );
-      if (response.ok) {
-        // 성공 시 로컬 상태 필터링하여 갱신
-        setFavorites((prev) =>
-          prev.filter((item) => item.recipeId !== recipeId),
+  const handleRemoveFavorite = useCallback(
+    async (recipeId) => {
+      if (!user) return;
+      try {
+        const response = await fetch(
+          `${API_URL}/favorites/${user.id}/${recipeId}`,
+          {
+            method: "DELETE",
+          },
         );
-      } else {
-        console.error("Failed to delete favorite");
+        if (response.ok) {
+          // 성공 시 로컬 상태 필터링하여 갱신
+          setFavorites((prev) =>
+            prev.filter((item) => item.recipeId !== recipeId),
+          );
+        } else {
+          console.error("Failed to delete favorite");
+        }
+      } catch (error) {
+        console.error("Error deleting favorite:", error);
       }
-    } catch (error) {
-      console.error("Error deleting favorite:", error);
-    }
-  }, [user]);
+    },
+    [user],
+  );
 
   // 평균 요리 시간 계산 (분 단위 추출) - useMemo로 연산 최적화
   const averageCookTime = useMemo(() => {
@@ -102,63 +105,72 @@ const FavoritesScreen = () => {
     return `${Math.round(total / favorites.length)}m`;
   }, [favorites]);
 
-  const renderRecipeItem = useCallback(({ item }) => (
-    <TouchableOpacity
-      style={[
-        styles.recipeCard,
-        { backgroundColor: COLORS.card, shadowColor: COLORS.shadow },
-      ]}
-      onPress={() => router.push(`/recipe/${item.recipeId}`)}
-      activeOpacity={0.8}
-    >
-      <Image
-        source={{ uri: item.image }}
-        style={styles.recipeImage}
-        contentFit="cover"
-        transition={200}
-        cachePolicy="memory-disk"
-        recyclingKey={item.recipeId.toString()}
-        placeholder={{ blurhash: "L6PZvn%e00t7_3afQ-fQ00ae~qj[" }}
-      />
-      <View style={styles.recipeInfo}>
-        <View style={styles.titleRow}>
+  const renderRecipeItem = useCallback(
+    ({ item }) => (
+      <TouchableOpacity
+        style={[
+          styles.recipeCard,
+          { backgroundColor: COLORS.card, shadowColor: COLORS.shadow },
+        ]}
+        onPress={() => router.push(`/recipe/${item.recipeId}?from=favorites`)}
+        activeOpacity={0.8}
+      >
+        <Image
+          source={{ uri: item.image }}
+          style={styles.recipeImage}
+          contentFit="cover"
+          transition={200}
+          cachePolicy="memory-disk"
+          recyclingKey={item.recipeId.toString()}
+          placeholder={{ blurhash: "L6PZvn%e00t7_3afQ-fQ00ae~qj[" }}
+        />
+        <View style={styles.recipeInfo}>
+          <View style={styles.titleRow}>
+            <Text
+              style={[styles.recipeTitle, { color: COLORS.text }]}
+              numberOfLines={1}
+            >
+              {item.title}
+            </Text>
+            <TouchableOpacity
+              onPress={() => handleRemoveFavorite(item.recipeId)}
+            >
+              <Ionicons name="heart" size={22} color={COLORS.primary} />
+            </TouchableOpacity>
+          </View>
           <Text
-            style={[styles.recipeTitle, { color: COLORS.text }]}
-            numberOfLines={1}
+            style={[styles.recipeDesc, { color: COLORS.textLight }]}
+            numberOfLines={2}
           >
-            {item.title}
+            Delicious recipe saved to your favorites list.
           </Text>
-          <TouchableOpacity onPress={() => handleRemoveFavorite(item.recipeId)}>
-            <Ionicons name="heart" size={22} color={COLORS.primary} />
-          </TouchableOpacity>
-        </View>
-        <Text
-          style={[styles.recipeDesc, { color: COLORS.textLight }]}
-          numberOfLines={2}
-        >
-          Delicious recipe saved to your favorites list.
-        </Text>
-        <View style={styles.recipeMeta}>
-          <View style={styles.metaItem}>
-            <Ionicons name="time-outline" size={14} color={COLORS.textLight} />
-            <Text style={[styles.metaText, { color: COLORS.textLight }]}>
-              {item.cookTime || "30m"}
-            </Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Ionicons
-              name="people-outline"
-              size={14}
-              color={COLORS.textLight}
-            />
-            <Text style={[styles.metaText, { color: COLORS.textLight }]}>
-              {item.servings || "4"} Servings
-            </Text>
+          <View style={styles.recipeMeta}>
+            <View style={styles.metaItem}>
+              <Ionicons
+                name="time-outline"
+                size={14}
+                color={COLORS.textLight}
+              />
+              <Text style={[styles.metaText, { color: COLORS.textLight }]}>
+                {item.cookTime || "30m"}
+              </Text>
+            </View>
+            <View style={styles.metaItem}>
+              <Ionicons
+                name="people-outline"
+                size={14}
+                color={COLORS.textLight}
+              />
+              <Text style={[styles.metaText, { color: COLORS.textLight }]}>
+                {item.servings || "4"} Servings
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  ), [handleRemoveFavorite, router]);
+      </TouchableOpacity>
+    ),
+    [handleRemoveFavorite, router],
+  );
 
   const keyExtractor = useCallback((item) => item.recipeId.toString(), []);
 
@@ -218,9 +230,7 @@ const FavoritesScreen = () => {
             >
               <Ionicons name="time" size={20} color={COLORS.secondary} />
             </View>
-            <Text style={favoritesStyles.statValue}>
-              {averageCookTime}
-            </Text>
+            <Text style={favoritesStyles.statValue}>{averageCookTime}</Text>
             <Text
               style={{ fontSize: 12, color: COLORS.textLight, marginTop: 4 }}
             >
@@ -248,7 +258,7 @@ const FavoritesScreen = () => {
           initialNumToRender={6}
           maxToRenderPerBatch={10}
           windowSize={5}
-          removeClippedSubviews={Platform.OS === 'android'}
+          removeClippedSubviews={Platform.OS === "android"}
           ListEmptyComponent={
             <View style={favoritesStyles.emptyState}>
               <View style={favoritesStyles.emptyIconContainer}>
