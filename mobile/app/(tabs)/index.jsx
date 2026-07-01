@@ -340,10 +340,10 @@ const HomeScreen = () => {
         keyExtractor={keyExtractor}
         numColumns={2}
         columnWrapperStyle={styles.columnWrapper}
-        initialNumToRender={6}
+        initialNumToRender={10}
         maxToRenderPerBatch={10}
-        windowSize={5}
-        removeClippedSubviews={Platform.OS === "android"}
+        windowSize={15}
+        removeClippedSubviews={false}
         ListHeaderComponent={
           <HomeHeader
             userNickName={userNickName}

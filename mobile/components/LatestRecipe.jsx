@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -8,6 +8,11 @@ import { homeStyles } from '../assets/styles/home.styles';
 
 const LatestRecipe = React.memo(({ latestRecipe, recentSectionHeight }) => {
   const router = useRouter();
+  const [imageError, setImageError] = useState(!latestRecipe?.image);
+
+  useEffect(() => {
+    setImageError(!latestRecipe?.image);
+  }, [latestRecipe?.image]);
 
   if (!latestRecipe) return null;
   
@@ -19,13 +24,14 @@ const LatestRecipe = React.memo(({ latestRecipe, recentSectionHeight }) => {
         activeOpacity={0.85}
       >
         <Image
-          source={{ uri: latestRecipe.image }}
+          source={imageError ? require('../assets/images/chicken.png') : { uri: latestRecipe.image }}
           style={homeStyles.featuredImage}
           contentFit="cover"
           transition={300}
           cachePolicy="memory-disk"
           priority="high"
-          placeholder={{ blurhash: "L6PZvn%e00t7_3afQ-fQ00ae~qj[" }}
+          placeholder={imageError ? null : { blurhash: "L6PZvn%e00t7_3afQ-fQ00ae~qj[" }}
+          onError={() => setImageError(true)}
         />
         <View style={homeStyles.featuredOverlay}>
           <View style={{ flexDirection: 'row', gap: 8 }}>

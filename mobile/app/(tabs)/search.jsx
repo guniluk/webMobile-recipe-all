@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -26,6 +26,72 @@ const filterUniqueMeals = (mealsArray) => {
     return !isDuplicate;
   });
 };
+
+const SearchRecipeItem = React.memo(({ item, onPress }) => {
+  const [imageError, setImageError] = useState(!item?.imageUrl);
+
+  useEffect(() => {
+    setImageError(!item?.imageUrl);
+  }, [item?.imageUrl]);
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.recipeCard,
+        { backgroundColor: COLORS.card, shadowColor: COLORS.shadow },
+      ]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <Image
+        source={imageError ? require("../../assets/images/chicken.png") : { uri: item.imageUrl }}
+        style={styles.recipeImage}
+        contentFit="cover"
+        transition={200}
+        cachePolicy="memory-disk"
+        placeholder={imageError ? null : { blurhash: "L6PZvn%e00t7_3afQ-fQ00ae~qj[" }}
+        onError={() => setImageError(true)}
+      />
+      <View style={styles.recipeInfo}>
+        <Text
+          style={[styles.recipeTitle, { color: COLORS.text }]}
+          numberOfLines={1}
+        >
+          {item.title}
+        </Text>
+        <Text
+          style={[styles.recipeDesc, { color: COLORS.textLight }]}
+          numberOfLines={2}
+        >
+          {item.description}
+        </Text>
+        <View style={styles.recipeMeta}>
+          <View style={styles.metaItem}>
+            <Ionicons
+              name="time-outline"
+              size={14}
+              color={COLORS.textLight}
+            />
+            <Text style={[styles.metaText, { color: COLORS.textLight }]}>
+              {item.cookTime}
+            </Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Ionicons
+              name="people-outline"
+              size={14}
+              color={COLORS.textLight}
+            />
+            <Text style={[styles.metaText, { color: COLORS.textLight }]}>
+              {item.servings} Servings
+            </Text>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+});
+SearchRecipeItem.displayName = "SearchRecipeItem";
 
 const SearchScreen = () => {
   const router = useRouter();
@@ -168,56 +234,10 @@ const SearchScreen = () => {
     ({ item }) => {
       if (!item) return null; // 방어 코드: item이 null일 경우 렌더링하지 않음
       return (
-        <TouchableOpacity
-          style={[
-            styles.recipeCard,
-            { backgroundColor: COLORS.card, shadowColor: COLORS.shadow },
-          ]}
+        <SearchRecipeItem
+          item={item}
           onPress={() => router.push(`/recipe/${item.id}?from=search`)}
-          activeOpacity={0.8}
-        >
-          <Image
-            source={{ uri: item.imageUrl }}
-            style={styles.recipeImage}
-            contentFit="cover"
-          />
-          <View style={styles.recipeInfo}>
-            <Text
-              style={[styles.recipeTitle, { color: COLORS.text }]}
-              numberOfLines={1}
-            >
-              {item.title}
-            </Text>
-            <Text
-              style={[styles.recipeDesc, { color: COLORS.textLight }]}
-              numberOfLines={2}
-            >
-              {item.description}
-            </Text>
-            <View style={styles.recipeMeta}>
-              <View style={styles.metaItem}>
-                <Ionicons
-                  name="time-outline"
-                  size={14}
-                  color={COLORS.textLight}
-                />
-                <Text style={[styles.metaText, { color: COLORS.textLight }]}>
-                  {item.cookTime}
-                </Text>
-              </View>
-              <View style={styles.metaItem}>
-                <Ionicons
-                  name="people-outline"
-                  size={14}
-                  color={COLORS.textLight}
-                />
-                <Text style={[styles.metaText, { color: COLORS.textLight }]}>
-                  {item.servings} Servings
-                </Text>
-              </View>
-            </View>
-          </View>
-        </TouchableOpacity>
+        />
       );
     },
     [router],
@@ -288,6 +308,10 @@ const SearchScreen = () => {
           showsVerticalScrollIndicator={false}
           onEndReached={loadMoreMeals}
           onEndReachedThreshold={0.3} // 리스트 끝 30% 영역 도달 시 자동 로드
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={15}
+          removeClippedSubviews={false}
           refreshControl={
             isRandom ? (
               <RefreshControl

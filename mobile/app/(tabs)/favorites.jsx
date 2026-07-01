@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  Platform,
 } from "react-native";
 import { COLORS } from "../../constants/colors";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +16,78 @@ import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { API_URL } from "../../constants/api";
 import { favoritesStyles } from "../../assets/styles/favorites.styles";
+
+const FavoriteRecipeItem = React.memo(({ item, onRemove, onPress }) => {
+  const [imageError, setImageError] = useState(!item.image);
+
+  useEffect(() => {
+    setImageError(!item.image);
+  }, [item.image]);
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.recipeCard,
+        { backgroundColor: COLORS.card, shadowColor: COLORS.shadow },
+      ]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <Image
+        source={imageError ? require("../../assets/images/chicken.png") : { uri: item.image }}
+        style={styles.recipeImage}
+        contentFit="cover"
+        transition={200}
+        cachePolicy="memory-disk"
+        recyclingKey={item.recipeId.toString()}
+        placeholder={imageError ? null : { blurhash: "L6PZvn%e00t7_3afQ-fQ00ae~qj[" }}
+        onError={() => setImageError(true)}
+      />
+      <View style={styles.recipeInfo}>
+        <View style={styles.titleRow}>
+          <Text
+            style={[styles.recipeTitle, { color: COLORS.text }]}
+            numberOfLines={1}
+          >
+            {item.title}
+          </Text>
+          <TouchableOpacity onPress={onRemove}>
+            <Ionicons name="heart" size={22} color={COLORS.primary} />
+          </TouchableOpacity>
+        </View>
+        <Text
+          style={[styles.recipeDesc, { color: COLORS.textLight }]}
+          numberOfLines={2}
+        >
+          Delicious recipe saved to your favorites list.
+        </Text>
+        <View style={styles.recipeMeta}>
+          <View style={styles.metaItem}>
+            <Ionicons
+              name="time-outline"
+              size={14}
+              color={COLORS.textLight}
+            />
+            <Text style={[styles.metaText, { color: COLORS.textLight }]}>
+              {item.cookTime || "30m"}
+            </Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Ionicons
+              name="people-outline"
+              size={14}
+              color={COLORS.textLight}
+            />
+            <Text style={[styles.metaText, { color: COLORS.textLight }]}>
+              {item.servings || "4"} Servings
+            </Text>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+});
+FavoriteRecipeItem.displayName = "FavoriteRecipeItem";
 
 const FavoritesScreen = () => {
   const router = useRouter();
@@ -107,67 +178,11 @@ const FavoritesScreen = () => {
 
   const renderRecipeItem = useCallback(
     ({ item }) => (
-      <TouchableOpacity
-        style={[
-          styles.recipeCard,
-          { backgroundColor: COLORS.card, shadowColor: COLORS.shadow },
-        ]}
+      <FavoriteRecipeItem
+        item={item}
+        onRemove={() => handleRemoveFavorite(item.recipeId)}
         onPress={() => router.push(`/recipe/${item.recipeId}?from=favorites`)}
-        activeOpacity={0.8}
-      >
-        <Image
-          source={{ uri: item.image }}
-          style={styles.recipeImage}
-          contentFit="cover"
-          transition={200}
-          cachePolicy="memory-disk"
-          recyclingKey={item.recipeId.toString()}
-          placeholder={{ blurhash: "L6PZvn%e00t7_3afQ-fQ00ae~qj[" }}
-        />
-        <View style={styles.recipeInfo}>
-          <View style={styles.titleRow}>
-            <Text
-              style={[styles.recipeTitle, { color: COLORS.text }]}
-              numberOfLines={1}
-            >
-              {item.title}
-            </Text>
-            <TouchableOpacity
-              onPress={() => handleRemoveFavorite(item.recipeId)}
-            >
-              <Ionicons name="heart" size={22} color={COLORS.primary} />
-            </TouchableOpacity>
-          </View>
-          <Text
-            style={[styles.recipeDesc, { color: COLORS.textLight }]}
-            numberOfLines={2}
-          >
-            Delicious recipe saved to your favorites list.
-          </Text>
-          <View style={styles.recipeMeta}>
-            <View style={styles.metaItem}>
-              <Ionicons
-                name="time-outline"
-                size={14}
-                color={COLORS.textLight}
-              />
-              <Text style={[styles.metaText, { color: COLORS.textLight }]}>
-                {item.cookTime || "30m"}
-              </Text>
-            </View>
-            <View style={styles.metaItem}>
-              <Ionicons
-                name="people-outline"
-                size={14}
-                color={COLORS.textLight}
-              />
-              <Text style={[styles.metaText, { color: COLORS.textLight }]}>
-                {item.servings || "4"} Servings
-              </Text>
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
+      />
     ),
     [handleRemoveFavorite, router],
   );
@@ -255,10 +270,10 @@ const FavoritesScreen = () => {
             favoritesStyles.recipesGrid,
           ]}
           showsVerticalScrollIndicator={false}
-          initialNumToRender={6}
+          initialNumToRender={10}
           maxToRenderPerBatch={10}
-          windowSize={5}
-          removeClippedSubviews={Platform.OS === "android"}
+          windowSize={15}
+          removeClippedSubviews={false}
           ListEmptyComponent={
             <View style={favoritesStyles.emptyState}>
               <View style={favoritesStyles.emptyIconContainer}>

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -8,6 +8,11 @@ import { recipeCardStyles } from "../assets/styles/home.styles";
 
 const RecipeItem = React.memo(({ item, from = "home" }) => {
   const router = useRouter();
+  const [imageError, setImageError] = useState(!item?.image);
+
+  useEffect(() => {
+    setImageError(!item?.image);
+  }, [item?.image]);
 
   return (
     <TouchableOpacity
@@ -17,13 +22,14 @@ const RecipeItem = React.memo(({ item, from = "home" }) => {
     >
       <View style={recipeCardStyles.imageContainer}>
         <Image
-          source={{ uri: item.image }}
+          source={imageError ? require("../assets/images/chicken.png") : { uri: item.image }}
           style={recipeCardStyles.image}
           contentFit="cover"
           transition={200}
           cachePolicy="memory-disk"
           recyclingKey={item.id.toString()}
-          placeholder={{ blurhash: "L6PZvn%e00t7_3afQ-fQ00ae~qj[" }}
+          placeholder={imageError ? null : { blurhash: "L6PZvn%e00t7_3afQ-fQ00ae~qj[" }}
+          onError={() => setImageError(true)}
         />
       </View>
       <View style={recipeCardStyles.content}>

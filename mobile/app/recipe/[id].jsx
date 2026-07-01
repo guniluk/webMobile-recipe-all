@@ -32,6 +32,13 @@ const RecipeDetailScreen = () => {
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    if (recipe) {
+      setImageError(!recipe.imageUrl);
+    }
+  }, [recipe]);
 
   // 뒤로가기 공통 처리 핸들러
   const handleBack = useCallback(() => {
@@ -197,13 +204,14 @@ const RecipeDetailScreen = () => {
         <View style={recipeDetailStyles.headerContainer}>
           <View style={recipeDetailStyles.imageContainer}>
             <Image
-              source={{ uri: recipe.imageUrl }}
+              source={imageError ? require("../../assets/images/chicken.png") : { uri: recipe.imageUrl }}
               style={recipeDetailStyles.headerImage}
               contentFit="cover"
               transition={300}
               cachePolicy="memory-disk"
               priority="high"
-              placeholder={{ blurhash: "L6PZvn%e00t7_3afQ-fQ00ae~qj[" }}
+              placeholder={imageError ? null : { blurhash: "L6PZvn%e00t7_3afQ-fQ00ae~qj[" }}
+              onError={() => setImageError(true)}
             />
           </View>
           <View style={styles.imageOverlay} />
