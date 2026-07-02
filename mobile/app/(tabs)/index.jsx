@@ -21,6 +21,7 @@ import RecipeItem from "../../components/RecipeItem";
 import HomeHeader from "../../components/HomeHeader";
 import HomeFooter from "../../components/HomeFooter";
 import LatestRecipe from "../../components/LatestRecipe";
+import CustomRefreshLoader from "../../components/CustomRefreshLoader";
 
 // Android에서 LayoutAnimation을 사용하기 위한 설정
 if (
@@ -328,6 +329,7 @@ const HomeScreen = () => {
 
   return (
     <View style={homeStyles.container}>
+      <CustomRefreshLoader refreshing={refreshing} />
       <FlatList
         data={displayedRecipes}
         extraData={{
@@ -381,8 +383,9 @@ const HomeScreen = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={COLORS.text}
-            colors={[COLORS.text]}
+            tintColor="transparent"
+            colors={["transparent"]}
+            style={{ backgroundColor: "transparent" }}
           />
         }
       />

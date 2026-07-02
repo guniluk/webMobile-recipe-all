@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
-const API_URL =
-  import.meta.env.VITE_API_URL || "https://webmobile-recipe.onrender.com/api";
+const API_URL = import.meta.env.VITE_API_URL;
+// const API_URL = "https://webmobile-recipe.onrender.com/api";
 
 export const useFavoriteStore = create((set, get) => ({
   favorites: [],

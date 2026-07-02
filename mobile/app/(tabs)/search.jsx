@@ -15,6 +15,7 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { MealAPI } from "../../services/mealAPI";
 import { searchStyles } from "../../assets/styles/search.styles";
+import CustomRefreshLoader from "../../components/CustomRefreshLoader";
 
 // Helper function to filter out duplicate meals by id
 const filterUniqueMeals = (mealsArray) => {
@@ -230,6 +231,7 @@ const SearchScreen = () => {
 
   return (
     <View style={searchStyles.container}>
+      <CustomRefreshLoader refreshing={refreshing} />
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: COLORS.text }]}>
@@ -293,8 +295,9 @@ const SearchScreen = () => {
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={onRefresh}
-                colors={[COLORS.primary]}
-                tintColor={COLORS.primary}
+                colors={["transparent"]}
+                tintColor="transparent"
+                style={{ backgroundColor: "transparent" }}
               />
             ) : undefined
           }
