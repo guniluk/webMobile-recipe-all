@@ -201,7 +201,7 @@ const SignInScreen = () => {
                 />
               </View>
 
-              <Text style={authStyles.title}>Recipe App</Text>
+              <Text style={authStyles.title}>YH Recipe App</Text>
               <Text style={authStyles.subtitle}>
                 Welcome Back! Please login to your account^^
               </Text>

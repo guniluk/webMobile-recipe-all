@@ -1,11 +1,11 @@
-import { and, eq } from 'drizzle-orm';
-import { db } from '../config/db.js';
-import { favoriteTable } from '../db/schema.js';
+import { and, eq } from "drizzle-orm";
+import { db } from "../config/db.js";
+import { favoriteTable } from "../db/schema.js";
 
 export const createFavorite = async (req, res) => {
   const { userId, recipeId, title, image, cookTime, servings } = req.body;
   if (!userId || !recipeId || !title) {
-    return res.status(400).json({ message: 'Missing required fields' });
+    return res.status(400).json({ message: "Missing required fields" });
   }
   const newFavorite = await db
     .insert(favoriteTable)
