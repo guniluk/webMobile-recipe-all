@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useUser } from "@clerk/clerk-react";
 import { MealAPI } from "../services/mealAPI";
 import RecipeCard from "../components/RecipeCard";
@@ -20,7 +20,7 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
 
   // 1. Initial Data Load
-  const fetchInitialData = async () => {
+  const fetchInitialData = useCallback(async () => {
     try {
       setLoading(true);
       const apiCategories = await MealAPI.getCategories();
@@ -56,17 +56,15 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    const fetchInit = () => {
-      fetchInitialData();
-    };
-    fetchInit();
   }, []);
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchInitialData();
+  }, [fetchInitialData]);
+
   // 2. Fetch Recipes by Category
-  const fetchRecipes = async () => {
+  const fetchRecipes = useCallback(async () => {
     if (!selectedCategory || categories.length === 0) return;
 
     try {
@@ -120,14 +118,12 @@ export default function Home() {
     } finally {
       setRecipesLoading(false);
     }
-  };
+  }, [selectedCategory, categories]);
 
   useEffect(() => {
-    const fetchRe = () => {
-      fetchRecipes();
-    };
-    fetchRe();
-  }, [selectedCategory, categories]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchRecipes();
+  }, [fetchRecipes]);
 
   // 3. Load More Recipes (Web version pagination)
   const loadMore = async () => {
