@@ -13,7 +13,7 @@ export default function Favorites() {
     if (user?.id) {
       fetchFavorites(user.id);
     }
-  }, [user, fetchFavorites]);
+  }, [user?.id, fetchFavorites]);
 
   const handleRemove = async (e, recipeId) => {
     e.preventDefault(); // Link 클릭 이벤트 방지

@@ -27,7 +27,7 @@ const RecipeItem = React.memo(({ item, from = "home" }) => {
           contentFit="cover"
           transition={200}
           cachePolicy="memory-disk"
-          recyclingKey={item.id.toString()}
+          recyclingKey={item?.id ? item.id.toString() : undefined}
           placeholder={imageError ? null : { blurhash: "L6PZvn%e00t7_3afQ-fQ00ae~qj[" }}
           onError={() => setImageError(true)}
         />

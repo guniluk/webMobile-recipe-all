@@ -27,6 +27,7 @@ export const searchStyles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+    marginBottom: 20,
   },
   searchIcon: {
     marginRight: 12,

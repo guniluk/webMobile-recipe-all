@@ -75,7 +75,7 @@ export default function RecipeDetail() {
     };
 
     loadRecipeData();
-  }, [id, user, navigate, fetchFavorites]);
+  }, [id, user?.id, navigate, fetchFavorites]);
 
   const isFavorite = checkIsFavorite(id);
 

@@ -5,6 +5,7 @@ import {
   SignedOut,
   RedirectToSignIn,
 } from "@clerk/clerk-react";
+import { ui } from "@clerk/ui";
 
 import Header from "./components/Header";
 import Home from "./pages/Home";
@@ -38,7 +39,7 @@ function ProtectedLayout({ children }) {
 
 function App() {
   return (
-    <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+    <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} ui={ui}>
       <BrowserRouter>
         <Routes>
           {/* Public Authentication Routes */}

@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useUser } from "@clerk/clerk-react";
 import { MealAPI } from "../services/mealAPI";
 import RecipeCard from "../components/RecipeCard";
 import LatestRecipe from "../components/LatestRecipe";
-import { RefreshCw, ChefHat } from "lucide-react";
+import { RefreshCw, ChefHat, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function Home() {
   const { user } = useUser();
@@ -18,6 +18,18 @@ export default function Home() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const scrollContainerRef = useRef(null);
+
+  // Scroll categories left or right
+  const handleScroll = (direction) => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 300;
+      scrollContainerRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
 
   // 1. Initial Data Load
   const fetchInitialData = useCallback(async () => {
@@ -239,29 +251,53 @@ export default function Home() {
           Categories
         </h2>
 
-        {/* Horizontal Category Scroll */}
-        <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
-          {categories.map((cat) => {
-            const isSelected = selectedCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`shrink-0 flex items-center space-x-3 px-5 py-3.5 rounded-2xl transition-all duration-200 border ${
-                  isSelected
-                    ? "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/20 scale-105"
-                    : "bg-slate-900 border-slate-800/80 text-slate-300 hover:border-slate-700 hover:text-white"
-                }`}
-              >
-                <img
-                  src={cat.image}
-                  alt={cat.name}
-                  className="w-8 h-8 object-contain rounded-lg bg-white/5 p-0.5"
-                />
-                <span className="font-bold text-sm">{cat.name}</span>
-              </button>
-            );
-          })}
+        {/* Relative Wrapper for Navigation Arrows */}
+        <div className="relative group">
+          {/* Left Arrow Button */}
+          <button
+            onClick={() => handleScroll("left")}
+            className="absolute left-0 top-1/2 -translate-y-1/2 -ml-4 z-10 p-2.5 bg-slate-900/90 border border-slate-850 hover:border-slate-700 text-slate-300 hover:text-white rounded-full shadow-xl hover:scale-110 transition-all duration-200 cursor-pointer"
+            title="Scroll Left"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+
+          {/* Horizontal Category Scroll */}
+          <div
+            ref={scrollContainerRef}
+            className="flex space-x-4 overflow-x-auto pb-4 scroll-smooth scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent"
+          >
+            {categories.map((cat) => {
+              const isSelected = selectedCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`shrink-0 flex items-center space-x-3 px-5 py-3.5 rounded-2xl transition-all duration-200 border ${
+                    isSelected
+                      ? "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/20 scale-105"
+                      : "bg-slate-900 border-slate-800/80 text-slate-300 hover:border-slate-700 hover:text-white"
+                  }`}
+                >
+                  <img
+                    src={cat.image}
+                    alt={cat.name}
+                    className="w-8 h-8 object-contain rounded-lg bg-white/5 p-0.5"
+                  />
+                  <span className="font-bold text-sm">{cat.name}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Right Arrow Button */}
+          <button
+            onClick={() => handleScroll("right")}
+            className="absolute right-0 top-1/2 -translate-y-1/2 -mr-4 z-10 p-2.5 bg-slate-900/90 border border-slate-850 hover:border-slate-700 text-slate-300 hover:text-white rounded-full shadow-xl hover:scale-110 transition-all duration-200 cursor-pointer"
+            title="Scroll Right"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
         </div>
       </section>
 

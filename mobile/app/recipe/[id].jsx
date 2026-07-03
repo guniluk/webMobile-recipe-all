@@ -93,7 +93,7 @@ const RecipeDetailScreen = () => {
     };
 
     loadRecipeData();
-  }, [id, user, handleBack]);
+  }, [id, user?.id, handleBack]);
 
   // 2. 즐겨찾기 추가/삭제 토글 - useCallback 적용
   const handleToggleFavorite = useCallback(async () => {

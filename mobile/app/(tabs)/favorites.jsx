@@ -39,7 +39,7 @@ const FavoriteRecipeItem = React.memo(({ item, onRemove, onPress }) => {
         contentFit="cover"
         transition={200}
         cachePolicy="memory-disk"
-        recyclingKey={item.recipeId.toString()}
+        recyclingKey={item?.recipeId ? item.recipeId.toString() : undefined}
         placeholder={imageError ? null : { blurhash: "L6PZvn%e00t7_3afQ-fQ00ae~qj[" }}
         onError={() => setImageError(true)}
       />
@@ -137,7 +137,7 @@ const FavoritesScreen = () => {
       };
 
       fetchFavorites();
-    }, [user]),
+    }, [user?.id]),
   );
 
   // 즐겨찾기 목록에서 삭제
