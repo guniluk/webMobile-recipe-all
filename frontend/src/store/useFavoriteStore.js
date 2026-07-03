@@ -1,7 +1,6 @@
-import { create } from "zustand";
+import { create } from 'zustand';
 
-const API_URL = import.meta.env.VITE_API_URL;
-// const API_URL = "https://webmobile-recipe.onrender.com/api";
+const API_URL = import.meta.env.VITE_API_URL; //TODO: change this when deploy to render server
 
 export const useFavoriteStore = create((set, get) => ({
   favorites: [],
@@ -16,10 +15,10 @@ export const useFavoriteStore = create((set, get) => ({
         const data = await response.json();
         set({ favorites: data || [] });
       } else {
-        console.error("Failed to fetch favorites");
+        console.error('Failed to fetch favorites');
       }
     } catch (error) {
-      console.error("Error fetching favorites:", error);
+      console.error('Error fetching favorites:', error);
     } finally {
       set({ loading: false });
     }
@@ -29,17 +28,17 @@ export const useFavoriteStore = create((set, get) => ({
     if (!userId || !recipe) return;
     try {
       const response = await fetch(`${API_URL}/favorites`, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           userId: userId,
           recipeId: parseInt(recipe.id),
           title: recipe.title,
           image: recipe.imageUrl,
-          cookTime: recipe.cookTime || "30m",
-          servings: recipe.servings?.toString() || "4",
+          cookTime: recipe.cookTime || '30m',
+          servings: recipe.servings?.toString() || '4',
         }),
       });
       if (response.ok) {
@@ -55,7 +54,7 @@ export const useFavoriteStore = create((set, get) => ({
         return true;
       }
     } catch (error) {
-      console.error("Error adding favorite:", error);
+      console.error('Error adding favorite:', error);
     }
     return false;
   },
@@ -66,7 +65,7 @@ export const useFavoriteStore = create((set, get) => ({
       const response = await fetch(
         `${API_URL}/favorites/${userId}/${recipeId}`,
         {
-          method: "DELETE",
+          method: 'DELETE',
         },
       );
       if (response.ok) {
@@ -78,7 +77,7 @@ export const useFavoriteStore = create((set, get) => ({
         return true;
       }
     } catch (error) {
-      console.error("Error removing favorite:", error);
+      console.error('Error removing favorite:', error);
     }
     return false;
   },

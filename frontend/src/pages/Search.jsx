@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { MealAPI } from "../services/mealAPI";
-import RecipeCard from "../components/RecipeCard";
-import { Search as SearchIcon, X, Sparkles, RefreshCw } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { MealAPI } from '../services/mealAPI';
+import RecipeCard from '../components/RecipeCard';
+import { Search as SearchIcon, X, Sparkles, RefreshCw } from 'lucide-react';
 
 // Helper function to filter out duplicate meals by id
 const filterUniqueMeals = (mealsArray) => {
@@ -15,7 +15,7 @@ const filterUniqueMeals = (mealsArray) => {
 };
 
 export default function Search() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [meals, setMeals] = useState([]);
   const [initialMeals, setInitialMeals] = useState([]); // Backup of the first recommended random meals
   const [allFetchedMeals, setAllFetchedMeals] = useState([]);
@@ -61,7 +61,7 @@ export default function Search() {
         // Initially show first 12 items for search
         setMeals(uniqueMeals.slice(0, 12));
       } catch (error) {
-        console.error("Search failed:", error);
+        console.error('Search failed:', error);
         if (currentRequestId === requestCountRef.current) {
           setMeals([]);
           setAllFetchedMeals([]);
@@ -89,7 +89,7 @@ export default function Search() {
         setInitialMeals(unique);
         setIsRandom(true);
       } catch (error) {
-        console.error("Failed to fetch initial random meals:", error);
+        console.error('Failed to fetch initial random meals:', error);
       } finally {
         setLoading(false);
       }
@@ -99,7 +99,7 @@ export default function Search() {
 
   // Debounce search query (300ms)
   useEffect(() => {
-    if (searchQuery.trim() === "") {
+    if (searchQuery.trim() === '') {
       const setM = () => {
         setMeals(initialMeals);
       };
@@ -142,7 +142,7 @@ export default function Search() {
       setMeals(unique);
       setInitialMeals(unique);
     } catch (error) {
-      console.error("Failed to refresh random meals:", error);
+      console.error('Failed to refresh random meals:', error);
     } finally {
       setRefreshing(false);
     }
@@ -187,7 +187,7 @@ export default function Search() {
               title="Shuffle random recipes"
             >
               <RefreshCw
-                className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`}
+                className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`}
               />
             </button>
           )}
@@ -207,7 +207,7 @@ export default function Search() {
           />
           {searchQuery.length > 0 && (
             <button
-              onClick={() => setSearchQuery("")}
+              onClick={() => setSearchQuery('')}
               className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-white transition-colors"
             >
               <X className="h-5 w-5" />
